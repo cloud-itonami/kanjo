@@ -1,0 +1,87 @@
+{
+  "@context": {
+    "@vocab": "https://etzhayyim.com/ns/actor#",
+    "id": "@id",
+    "type": "@type"
+  },
+  "id": "actor:kanjo",
+  "type": "Actor",
+  "name": "kanjo",
+  "glyph": "勘定",
+  "displayNameJa": "勘定 (かんじょう)",
+  "displayNameEn": "Kanjō — Public-Company Financial-Disclosure (決算) Knowledge Graph",
+  "purpose": "Datafies the world's PUBLIC (listed) companies' DISCLOSED financial facts — the balance sheet (貸借対照表), income statement (損益計算書) and cash-flow statement (キャッシュフロー計算書) line items from PRIMARY disclosure (JP EDINET 有価証券報告書 + US SEC EDGAR 10-K/20-F + UK Companies House + EU OAM, all Tier-A per ADR-2605263800) — into the kotoba Datom log as `:fin.fact/*`, normalized across JP-GAAP / US-GAAP / IFRS onto canonical concepts. Surfaces aggregate-first sector / health observations routed to transparency + financial resilience. The EXTERNAL public-company sibling of toritate 執帳 (internal accounting) and the financials face of kabuto 兜 (supply chain). NON-ADJUDICATING and gives NO investment advice — it records what the company disclosed, never a verdict, rating, valuation, or recommendation.",
+  "purposeJa": "全世界の公開（上場）企業が開示した決算ファクト（貸借対照表・損益計算書・キャッシュフロー計算書の各科目）を、一次開示（JP EDINET 有価証券報告書・US SEC EDGAR 10-K/20-F・UK Companies House・EU OAM、いずれも ADR-2605263800 の Tier-A）から kotoba Datom log に `:fin.fact/*` として登録。日本基準/米国基準/IFRS を canonical concept に正規化し、業種・健全性の集計優先の所見を透明性・財務レジリエンスへ routing。toritate 執帳（内部会計）の対外 sibling、kabuto 兜（サプライチェーン）の財務面。非裁定・投資助言なし — 企業自身が開示した数字を記録するのみで、格付・評価・推奨は行わない。四季報など有料商用編集データは取り込まない（一次開示のみ）。",
+  "status": "R0-design-only",
+  "tier": "B",
+  "adr": "2606032000",
+  "dependsOnAdr": ["2605263800", "2606022000", "2604291500", "2605262900", "2605301600", "2605262130", "2605312345", "2605215000", "2606013600", "2606013800"],
+  "schema": ["00-contracts/schemas/corporate-financials-ontology.kotoba.edn"],
+  "substrate": {
+    "state": "kotoba Datom log (ADR-2605312345) — IPFS block backend, MST ingress, Base L2 anchor",
+    "largeAssets": "source XBRL / PDF filings → DataLad → IPFS (80-data/corporate-financials) — NO git-lfs; CID anchored on :fin.filing/doc-cid",
+    "inference": "Murakumo-only (ADR-2605215000)",
+    "render": "in-browser kotoba-wasm node (ADR-2606013600) — /search queries the :fin.fact graph client-side"
+  },
+  "integrates": ["actor:kabuto", "actor:toritate", "actor:tsumugi", "actor:danjo", "actor:kanae", "actor:himotoki"],
+  "cells": [
+    {
+      "id": "cell:kanjo.concept_map",
+      "method": "methods/concept_map.py",
+      "input": "(none — the canonical concept catalogue is in-code)",
+      "output": ["out/concept-dictionary.kotoba.edn"],
+      "pipeline": "canonical concept catalogue → reverse index (jgaap/usgaap/ifrs element → canonical) → :fin.concept/* dictionary datoms. The G5 :synthesized GAAP-normalization layer; honest where standards are not comparable (経常利益 = JGAAP-only)."
+    },
+    {
+      "id": "cell:kanjo.ingest",
+      "method": "methods/ingest.py",
+      "input": "data/ingest/*.json (SEC EDGAR companyfacts JSON or EDINET pre-extracted element JSON) or seed",
+      "output": ["data/facts.merged.kotoba.edn"],
+      "pipeline": "primary filing → element → canonical concept (concept_map) → :fin.filing/:fin.fact EAVT → merge with seed (:authoritative wins over :representative)",
+      "gate": "G7 — live EDGAR/EDINET fetch requires KANJO_OPERATOR_GATE=1 + explicit --fetch-edgar CIK (single polite request, never an organism-tick scrape; passive-only per ADR-2605262400 §7). Offline/seed default, tagged :representative (G5)"
+    },
+    {
+      "id": "cell:kanjo.analyze",
+      "method": "methods/analyze.py",
+      "input": "data/seed-financial-facts.kotoba.edn (or data/facts.merged.kotoba.edn)",
+      "output": ["out/intel-report.md", "out/financial-metrics.kotoba.edn"],
+      "pipeline": "facts → per-company per-FY ratios (:fin.metric :synthesized) → YoY (as-of history) → sector/currency aggregates (:fin.agg, coverage-honest, NO cross-currency FX) → aggregate-first report. Non-adjudicating, no advice."
+    }
+  ],
+  "lexiconNamespaces": [
+    "com.etzhayyim.kanjo.registerFiling",
+    "com.etzhayyim.kanjo.registerFinancialFact",
+    "com.etzhayyim.kanjo.publishConceptDictionary",
+    "com.etzhayyim.kanjo.publishIntelReport"
+  ],
+  "display": {
+    "did": "did:web:etzhayyim.com:actor:kanjo",
+    "didDoc": "https://etzhayyim.com/actor/kanjo/did.json",
+    "search": "https://etzhayyim.com/search (in-browser kotoba-wasm node)",
+    "registry": "50-infra/etzhayyim-did-web/src/registry/infra-actors.ts (INFRA_ACTORS.kanjo — pending registration)"
+  },
+  "gates": {
+    "G1": "PRIMARY public disclosure ONLY — EDINET / SEC EDGAR / Companies House / EU OAM, all Tier-A (ADR-2605263800 §2). PROHIBITED inputs: 会社四季報 (paid copyrighted editorial compilation + 業績予想) and all paid commercial terminals (Bloomberg / S&P Capital IQ / Refinitiv / FactSet / Moody's / D&B / Pitchbook / Crunchbase) per Charter Rider §2(e) anti-gatekeeping + §2(c). Read the filing, never the terminal.",
+    "G2": "NON-ADJUDICATING — records disclosed facts + transparent ratios. Does NOT rate good/bad, value a company, rule fraud/solvency, or label a company. Sibling of kabuto G4 / danjo. A transparency map, never a verdict.",
+    "G3": "aggregate-first — sector / coverage aggregates surface first; per-company facts mirror the filing verbatim.",
+    "G4": "NO investment advice / NO securities recommendation (金商法 — NOT 投資助言業) — no buy/sell/hold, no price targets, no ratings, no portfolio. No forecasting (no 業績予想 — exactly what 四季報 adds).",
+    "G5": "sourcing honesty (:authoritative parsed-from-XBRL | :representative seed/headline | :synthesized derived). Metrics + aggregates are :synthesized, never re-ingested as disclosed facts. Σ aggregates are coverage-bounded, never a market total.",
+    "G6": "Murakumo-only narration (ADR-2605215000).",
+    "G7": "outward-gated INGEST — live EDGAR/EDINET fetch = KANJO_OPERATOR_GATE + Council; full-universe XBRL parse is R1. Passive-only (ADR-2605262400 §7), no organism-tick scraping.",
+    "G8": "no git-lfs — source XBRL/PDF filings → DataLad → IPFS (80-data/corporate-financials); CID on :fin.filing/doc-cid.",
+    "G9": "PII / redaction — filings name officers/directors. kanjō ingests the FINANCIAL line items, not the person roster; any incidental personal data follows the ADR-2605263800 §5 per-jurisdiction redaction policy (GDPR / 個人情報保護法) → encrypted envelope, excluded by default.",
+    "G10": "NO market-abuse enablement — published filings only; never non-public material facts or pre-disclosure insider data (金商法).",
+    "G11": "restatement-as-history (非終末論) — a 訂正報告書 asserts a NEW fact via :fin.fact/superseded-by; the prior Datom is RETAINED, never deleted. Read as-of.",
+    "G12": "read-only — never mutates upstream filings; kanjō is an observer."
+  },
+  "nonGoals": [
+    "N1 — NOT investment advice / 投資判断 (no buy/sell/hold, no targets, no portfolio).",
+    "N2 — NOT a credit rating agency (no ratings / scores / outlooks).",
+    "N3 — NOT 四季報 / no commercial-terminal data (Tier-C prohibited).",
+    "N4 — NOT fraud / solvency adjudication (records facts + flags arithmetic; ruling is a state/court matter — danjo-style observation boundary).",
+    "N5 — NOT forecasting / 業績予想 (reported actuals only).",
+    "N6 — NOT real-time market data / quotes / valuation.",
+    "N7 — NOT private-company financials (public-disclosure filers only).",
+    "N8 — NOT tax / accounting advice (税務・会計助言なし)."
+  ]
+}

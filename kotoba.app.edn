@@ -1,0 +1,13 @@
+;; kotoba.app.edn — actor:kanjo 勘定 KOTOBA Mesh application manifest (generated scaffold).
+;; Deploy:  kotoba app deploy kotoba.app.edn  (compiles methods/mesh.clj → CID → control datoms)
+{:kotoba.app/name    "kanjo"
+ :kotoba.app/version "0.1.0"
+ :kotoba.app/components
+ [{:name     "kanjo"
+   :src      "methods/mesh.clj"                  ; Clojure default → run + on-kse
+   :scale    1
+   :triggers [{:type :kse :topic "etzhayyim/actor/kanjo"}]  ; observatory on-kse (ADR-2606230001 §4)
+   :requires #{:cap/kqe}}]
+
+ :kotoba.app/placement {:spread  :zone
+                        :require {:tier "edge"}}}
