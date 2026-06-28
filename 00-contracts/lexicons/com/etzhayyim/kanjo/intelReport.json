@@ -1,0 +1,26 @@
+{
+  "lexicon": 1,
+  "id": "com.etzhayyim.kanjo.intelReport",
+  "description": "An AT Protocol pointer to a coverage-bounded kanjo intel report (the aggregate-first transparency map) persisted on IPFS. Carries coverage stats so a reader can never mistake Σ for a market total (G5 coverage-honesty).",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["title", "reportCid", "filings", "facts", "companies", "createdAt"],
+        "properties": {
+          "title":     { "type": "string", "maxLength": 300 },
+          "reportCid": { "type": "string", "description": "IPFS CID of out/intel-report.md (dag-pb)." },
+          "graphCid":  { "type": "string", "description": "IPFS CID of the disclosed-fact kotoba graph." },
+          "ipns":      { "type": "string", "description": "IPNS name of the kanjo-coverage DataLad dataset." },
+          "filings":   { "type": "integer" },
+          "facts":     { "type": "integer" },
+          "companies": { "type": "integer" },
+          "coverageNote": { "type": "string", "description": "e.g. 'primary SEC disclosure only; ~47 US filers; NOT a market total'." },
+          "createdAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    }
+  }
+}

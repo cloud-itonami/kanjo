@@ -1,0 +1,16 @@
+{
+  "$type": "com.etzhayyim.kanjo.intelReport",
+  "actor": "did:web:etzhayyim.github.io:com-etzhayyim-kanjo",
+  "title": "kanjō×kabuto world supply-chain dependency map + atproto surface (R1)",
+  "adr": ["ADR-0002", "ADR-0003", "ADR-0004"],
+  "ipfs": {
+    "depgraph": "QmUtXqPsx8PgVqQLTCtQf1sX6XwT7vwmEXuCALm5TkivGz",
+    "atproto": "QmVfX9P5LxMeBdTRYj1TgrGPqn2xc2sHLmjejijYQak2sW",
+    "chokepoints_seed": "Qmco8mv9Zaa6YB6RUPypm4zyhnt7baTx8NaXDCNaybUc6j",
+    "lexicons": "QmZEtLrZsrtELMdWuvH49SPdZdH2DamNJnozbUT2PzqgW4"
+  },
+  "coverage": { "supply_edges": 361, "incident_companies": 335, "disclosed_financials": 28, "kabuto_universe": 1719 },
+  "sourcing": "representative; primary-disclosure only (G1, ADR-0004 extended: EDINET/EDGAR/Companies House/EU-OAM/DART/CNINFO)",
+  "honesty": "Σ is coverage-bounded, NOT a world total; no cross-currency sums; non-adjudicating (G2)",
+  "createdDate": "2026-06-28"
+}

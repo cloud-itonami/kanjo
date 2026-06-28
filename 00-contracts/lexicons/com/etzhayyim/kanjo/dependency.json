@@ -1,0 +1,29 @@
+{
+  "lexicon": 1,
+  "id": "com.etzhayyim.kanjo.dependency",
+  "description": "One DISCLOSED economic-dependency edge between two companies (or a company and a customer/supplier/geography it named in its own filing). Non-adjudicating (G2): an observation of what the filer itself disclosed (e.g. a customer-concentration note, a segment, a major-supplier disclosure) — never an inferred or scored relationship, never a verdict. The supply-chain / world-economy face shared with kabuto (兜).",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["from", "relation", "sourcing", "createdAt"],
+        "properties": {
+          "from":      { "type": "string", "description": "Disclosing company — org.corp.* id." },
+          "fromName":  { "type": "string", "maxLength": 200 },
+          "to":        { "type": "string", "description": "Counterparty org.corp.* id when the filer named it; omitted when the disclosure is unnamed (e.g. 'one customer >10% of revenue')." },
+          "toName":    { "type": "string", "maxLength": 200 },
+          "relation":  { "type": "string", "enum": [":customer-concentration", ":supplier", ":customer", ":segment", ":geography", ":subsidiary", ":equity-method"], "description": "The kind of dependency the FILER disclosed." },
+          "share":     { "type": "string", "description": "Disclosed share as a decimal string when the filer quantified it (e.g. concentration %); omitted otherwise." },
+          "fiscalYear":{ "type": "integer", "minimum": 1900, "maximum": 2200 },
+          "basisFact": { "type": "string", "description": "rkey/uri of the com.etzhayyim.kanjo.disclosure fact this edge is grounded in." },
+          "source":    { "type": "string", "enum": [":edinet", ":edgar", ":companies-house", ":eu-oam", ":dart", ":cninfo"] },
+          "docCid":    { "type": "string", "description": "IPFS CID of the source filing." },
+          "sourcing":  { "type": "string", "enum": [":authoritative", ":representative", ":synthesized"] },
+          "createdAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    }
+  }
+}

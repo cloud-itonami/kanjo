@@ -1,0 +1,19 @@
+;; kanjō 勘定 — organism manifest for the shared kototama self-publish runtime
+;; (kototama/lib/actor/publish.bb). The actor ships this; the runtime is common.
+{:did        "did:web:etzhayyim.github.io:com-etzhayyim-kanjo"
+ :handle     "kanjo.etzhayyim.com"
+ :ipns-key   "kanjo-actor"
+ :graph-type "com.etzhayyim.kanjo.graph"
+ :published  "2026-06-28"
+ :regen [["bb" "-e" "(load-file \"methods/kanjo_edn.cljc\")(load-file \"methods/atproto.cljc\")(require (quote [kanjo.methods.atproto :as a]))(a/-main)"]
+         ["bb" "-e" "(load-file \"methods/kanjo_edn.cljc\")(load-file \"methods/depgraph.cljc\")(require (quote [kanjo.methods.depgraph :as d]))(d/-main)"]
+         ["sh" "-c" "dot -Tsvg out/depgraph/world-supply-core.dot -o out/depgraph/world-supply-core.svg 2>/dev/null || true"]]
+ :bundle [["out/atproto/profile.json"                       "atproto/profile.json"]
+          ["out/atproto/disclosures.jsonl"                  "atproto/disclosures.jsonl"]
+          ["out/atproto/posts.jsonl"                        "atproto/posts.jsonl"]
+          ["out/depgraph/depgraph-report.md"                "depgraph/depgraph-report.md"]
+          ["out/depgraph/dependencies.kotoba.edn"           "depgraph/dependencies.kotoba.edn"]
+          ["out/depgraph/world-supply-core.svg"             "depgraph/world-supply-core.svg"]
+          ["data/coverage-manifests/kanjo-depgraph-manifest.json" "kanjo-depgraph-manifest.json"]]
+ :posts-file   "out/atproto/posts.jsonl"
+ :post-text-re "\"text\":\"(.*?)\",\"langs\""}

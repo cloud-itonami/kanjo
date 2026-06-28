@@ -30,7 +30,8 @@
    "org.corp.us.apple"     ["Apple"         ":electronics" "US"]
    "org.corp.us.microsoft" ["Microsoft"     ":software"    "US"]})
 
-(def ccy-sym {":jpy" "¥" ":usd" "$" ":eur" "€" ":gbp" "£"})
+(def ccy-sym {":jpy" "¥" ":usd" "$" ":eur" "€" ":gbp" "£"
+              ":krw" "₩" ":cny" "元" ":sek" "kr" ":twd" "NT$"})
 
 #?(:clj
    (def ^:private here
