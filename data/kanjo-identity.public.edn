@@ -1,0 +1,9 @@
+;; kanjō 勘定 — PUBLIC identity record (non-secret; the private key lives in the IPFS keystore
+;; as key 'kanjo-actor' and .kanjo/identity.edn, both gitignored). ADR-0006.
+{:actor/did    "did:web:etzhayyim.github.io:com-etzhayyim-kanjo"
+ :actor/handle "kanjo.etzhayyim.com"
+ :actor/ipns   "/ipns/k51qzi5uqu5dlamopaa4ntg8yd587dhhla9apq1tmnufraaagomozsjm8rkgc1"
+ :actor/ipns-key "kanjo-actor"
+ :actor/model  :self-issued-cacao
+ :actor/operator-gated false
+ :actor/minted "2026-06-28"}
