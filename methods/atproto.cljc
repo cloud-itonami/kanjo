@@ -2,7 +2,7 @@
   "kanjō 勘定 — atproto cell. Composes the actor's AT Protocol surface from the
   disclosed-fact graph: a PROFILE (app.bsky.actor.profile), structured DISCLOSURE
   records (com.etzhayyim.kanjo.disclosure), and human-readable SOCIAL POSTS
-  (app.bsky.feed.post) ready to publish to the actor's PDS (pds.etzhayyim.com,
+  (app.bsky.feed.post) ready to publish to the actor's PDS (pds.aozora.app,
   did:web:etzhayyim.github.io:com-etzhayyim-kanjo / at://kanjo.etzhayyim.com).
 
   CONSTITUTIONAL BY CONSTRUCTION:
@@ -234,7 +234,7 @@
        (spit (io/file outdir "publish-manifest.json")
              (->json {"$type" "com.etzhayyim.kanjo.publishManifest"
                       "actor" actor-did "handle" actor-handle
-                      "pds" "https://pds.etzhayyim.com"
+                      "pds" "https://pds.aozora.app"
                       "profile" "profile.json"
                       "disclosures" (count disclosures)
                       "posts" (count posts)

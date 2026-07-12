@@ -104,7 +104,7 @@ Canonical concepts: `:revenue :gross-profit :operating-income :ordinary-income(�
   valuation / forecast / buy-sell language (English on word boundaries so "operating income" never
   trips "rating"; Japanese on substring). Deterministic / resume-safe — record key is a content hash
   (FNV-1a) of the fact id, `createdAt` passed in (no clock/PRNG in the pure path). Offline
-  composition is safe; the `com.atproto.repo.applyWrites` push to `pds.etzhayyim.com` is the
+  composition is safe; the `com.atproto.repo.applyWrites` push to `pds.aozora.app` is the
   operator/Council follow-up (self-issued CACAO, no token). Invariants in `tests/test_atproto.cljc`.
 
   ```bash
@@ -156,7 +156,7 @@ Canonical concepts: `:revenue :gross-profit :operating-income :ordinary-income(�
   `actor.atproto` / `actor.identity`; ADR kototama-0002): regenerate → re-assert `gates/assert-no-advice`
   on every post → bundle → `ipfs name publish --key=kanjo-actor`. (omit `--live` for dry-run.) The
   G1/G2/G4/G5 content guards are UNCHANGED — autonomy widens who may press send, not what may be said.
-  Standard-PDS mirror (`pds.etzhayyim.com`) needs an app-password (credential, not policy). Public
+  Standard-PDS mirror (`pds.aozora.app`) needs an app-password (credential, not policy). Public
   identity: `data/kanjo-identity.public.edn`.
 
   **Government⟷economy join (ADR-0005, design):** keizu 系図 government money → `org.corp.*` payee →
