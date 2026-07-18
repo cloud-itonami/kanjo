@@ -96,85 +96,15 @@ Canonical concepts: `:revenue :gross-profit :operating-income :ordinary-income(�
   python3 methods/autorun.py --cycles 3 --fresh   # AUTONOMOUS heartbeat → LOCAL kotoba Datom log
   ```
 
-- `cell:kanjo.atproto` → `methods/atproto.cljc` (ADR-0002) — composes the actor's **AT Protocol**
-  surface from the disclosed-fact graph: an `app.bsky.actor.profile` PROFILE, structured
-  `com.etzhayyim.kanjo.disclosure` records (one per disclosed fact, provenance + IPFS doc-cid), and
-  `app.bsky.feed.post` SOCIAL POSTS (headline subset, each embedding its disclosure record). **G2/G4
-  by construction**: `assert-clean` rejects any machine-composed outward string carrying rating /
-  valuation / forecast / buy-sell language (English on word boundaries so "operating income" never
-  trips "rating"; Japanese on substring). Deterministic / resume-safe — record key is a content hash
-  (FNV-1a) of the fact id, `createdAt` passed in (no clock/PRNG in the pure path). Offline
-  composition is safe; the `com.atproto.repo.applyWrites` push to `pds.aozora.app` is the
-  operator/Council follow-up (self-issued CACAO, no token). Invariants in `tests/test_atproto.cljc`.
+## Lexicons (kotoba-native)
 
-  ```bash
-  bb -e '(load-file "methods/kanjo_edn.cljc")(load-file "methods/atproto.cljc")(require (quote [kanjo.methods.atproto :as a]))(a/-main)'
-  # → out/atproto/{profile.json, disclosures.jsonl, posts.jsonl, publish-manifest.json}
-  ```
-
-- `cell:kanjo.depgraph` → `methods/depgraph.cljc` (ADR-0003) — the **supply-chain / world-economy
-  DEPENDENCY** face. Joins kabuto 兜's first-class supply edges (supplier→customer, shared
-  `org.corp.*`) with kanjō's disclosed `:revenue` so the global dependency graph is anchored to
-  filed numbers. Emits (1) `com.etzhayyim.kanjo.dependency` records, (2) per-company dependency
-  metrics — `out-crit` Σ criticality as SUPPLIER (systemic-chokepoint intensity) / `in-crit` as
-  customer — ranking the most depended-upon suppliers (seed correctly surfaces TSMC·CATL·ASML·Arm·
-  NVIDIA), and (3) a **Graphviz DOT visualization (可視化)** — `world-supply.dot` (full) +
-  `world-supply-core.dot` (top-20 readable), nodes coloured by sector, gold-bordered + revenue-sized
-  where kanjō-disclosed, edges by criticality. **G2 non-adjudicating**: a resilience/transparency map
-  so buyers diversify — NOT a ranking, rating, or target list (the G2 line is printed on the canvas
-  and asserted). kabuto edges are `:representative` (G5). Coverage-honest (Σ ≠ world total).
-  Invariants in `tests/test_depgraph.cljc`.
-
-  ```bash
-  bb -e '(load-file "methods/kanjo_edn.cljc")(load-file "methods/depgraph.cljc")(require (quote [kanjo.methods.depgraph :as d]))(d/-main)'
-  dot -Tsvg out/depgraph/world-supply-core.dot -o out/depgraph/world-supply-core.svg   # 可視化
-  ```
-
-  Coverage-anchoring seed: `data/seed-supply-chokepoints.kotoba.edn` — a bounded `:representative`
-  seed (10 filings / 23 facts) of disclosed FY2024 headline figures for the NON-US supply chokepoints
-  the dependency graph surfaced (TSMC·ASML·Arm 20-F via EDGAR; DENSO·Shin-Etsu·Tokyo Electron·
-  Advantest·Lasertec·DISCO·Murata 有報 via EDINET). depgraph merges it with `facts.merged` so those
-  systemic nodes carry disclosed scale (coverage 14→24 companies). KRW/CNY/SEK filers (Samsung, SK
-  Hynix, CATL, Ericsson) are deferred until kanjō's unit set covers them — NOT because they matter
-  less (stated in the seed header; honest gap). Full EDINET/EU-OAM/exchange universe stays G7-gated.
-
-  **Multi-currency + G1 source extension (ADR-0004):** unit set now `{… :krw :cny :sek :twd}` and
-  Tier-A sources now include `:dart` (KR 전자공시) + `:cninfo` (CN 巨潮资讯) — official primary-disclosure
-  systems, analogous to EDINET/EDGAR (NOT terminals). Samsung/SK Hynix/CATL/Ericsson now ingestable
-  (coverage 28). No cross-currency Σ (per-currency aggregates only).
-
-  **IPFS-pinned (2026-06-28, local repo + pin):** depgraph `QmUtXqPsx8PgVqQLTCtQf1sX6XwT7vwmEXuCALm5TkivGz` ·
-  atproto `QmVfX9P5LxMeBdTRYj1TgrGPqn2xc2sHLmjejijYQak2sW` · chokepoint-seed
-  `Qmco8mv9Zaa6YB6RUPypm4zyhnt7baTx8NaXDCNaybUc6j` · lexicons `QmZEtLrZsrtELMdWuvH49SPdZdH2DamNJnozbUT2PzqgW4` ·
-  manifest `QmTNbk4Yx7XVsJUBS9s7tnyDBGCMYybrgxR3MhW3RyHVW9` (`data/coverage-manifests/kanjo-depgraph-manifest.json`).
-
-  **Autonomous self-publish — operator gate LIFTED (ADR-0006).** kanjō holds its own Ed25519 key
-  (IPFS keystore `kanjo-actor`, gitignored) and self-publishes its graph to its key-derived IPNS name
-  `/ipns/k51qzi5uqu5dlamopaa4ntg8yd587dhhla9apq1tmnufraaagomozsjm8rkgc1` — no operator, no token
-  (owner directive 2026-06-28). Re-publish: **`bb methods/publish.bb --live`** — a babashka cell built
-  on the SHARED **kototama actor lib** (`../../com-junkawasaki/kototama/lib/actor` — `actor.gates` /
-  `actor.atproto` / `actor.identity`; ADR kototama-0002): regenerate → re-assert `gates/assert-no-advice`
-  on every post → bundle → `ipfs name publish --key=kanjo-actor`. (omit `--live` for dry-run.) The
-  G1/G2/G4/G5 content guards are UNCHANGED — autonomy widens who may press send, not what may be said.
-  Standard-PDS mirror (`pds.aozora.app`) needs an app-password (credential, not policy). Public
-  identity: `data/kanjo-identity.public.edn`.
-
-  **Government⟷economy join (ADR-0005, design):** keizu 系図 government money → `org.corp.*` payee →
-  kabuto supply → kanjō financials, once keizu adds a `:money/payee-corp` bridge (its payees are opaque
-  today). depgraph already joins on `org.corp.*` and is structured to overlay the keizu money export.
-
-## Lexicons (AT Protocol — `00-contracts/lexicons/com/etzhayyim/kanjo/`)
-
-Shipped (ADR-0002): **`disclosure`** (one disclosed fact), **`dependency`** (one disclosed
-economic-dependency edge — supply-chain face, ADR-0003), **`intelReport`** (IPFS pointer to the
-coverage-bounded report). The kotoba-native write lexicons
-(`registerFiling,registerFinancialFact,publishConceptDictionary,publishIntelReport`) remain
-path-reserved alongside.
+`com.etzhayyim.kanjo.{registerFiling,registerFinancialFact,publishConceptDictionary,publishIntelReport}`
+— `00-contracts/lexicons/com/etzhayyim/kanjo/` (path-reserved; lexicon JSON lands with R1).
 
 ## Run
 
 ```bash
-cd 20-actors/kanjo
+cd com-etzhayyim-kanjo
 python3 methods/concept_map.py          # → out/concept-dictionary.kotoba.edn
 python3 methods/ingest.py               # offline: bridge data/ingest/*.json + seed → data/facts.merged.kotoba.edn
 python3 methods/analyze.py              # → out/intel-report.md + out/financial-metrics.kotoba.edn

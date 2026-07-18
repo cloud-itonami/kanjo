@@ -1,0 +1,80 @@
+{:lexicon 1,
+ :id "com.etzhayyim.kanjo.disclosure",
+ :description
+ "One financial fact a listed company DISCLOSED in its primary filing, registered as an AT Protocol record. Non-adjudicating (G2) / no investment advice (G4): a disclosed number or a transparent ratio of two disclosed numbers — never a rating, valuation, forecast, or recommendation. Provenance anchored to the source filing and its IPFS doc-cid.",
+ :defs
+ {:main
+  {:type "record",
+   :key "tid",
+   :record
+   {:type "object",
+    :required
+    ["company"
+     "fiscalYear"
+     "statement"
+     "concept"
+     "value"
+     "unit"
+     "source"
+     "sourcing"
+     "createdAt"],
+    :properties
+    {:statement
+     {:type "string",
+      :enum [":bs" ":pl" ":cf" ":eps"],
+      :description "Balance sheet / income / cash-flow / per-share."},
+     :conceptRaw
+     {:type "string",
+      :description
+      "Source taxonomy element kept for audit, e.g. ifrs-full:Revenue."},
+     :unit
+     {:type "string",
+      :enum [":jpy" ":usd" ":eur" ":gbp" ":krw" ":cny" ":sek" ":twd"]},
+     :scale
+     {:type "string", :enum [":units" ":thousands" ":millions"]},
+     :value
+     {:type "string",
+      :description
+      "Disclosed figure as a decimal string (no float rounding loss)."},
+     :accounting {:type "string", :enum [":ifrs" ":usgaap" ":jgaap"]},
+     :createdAt {:type "string", :format "datetime"},
+     :source
+     {:type "string",
+      :enum
+      [":edinet"
+       ":edgar"
+       ":companies-house"
+       ":eu-oam"
+       ":dart"
+       ":cninfo"],
+      :description
+      "Primary-disclosure source only (G1). :dart = KR 금융감독원 전자공시 (FSS DART); :cninfo = CN 巨潮资讯 (CSRC-designated). Both are official primary-disclosure systems analogous to EDINET/EDGAR — the filing, never a terminal."},
+     :periodEnd {:type "string", :format "datetime"},
+     :docCid
+     {:type "string",
+      :description
+      "IPFS CID of the source filing document (G8 — never git-lfs)."},
+     :concept
+     {:type "string",
+      :description
+      "Canonical GAAP-normalized concept, e.g. :revenue :net-income :total-assets :cfo."},
+     :context
+     {:type "string", :enum [":consolidated" ":nonconsolidated"]},
+     :fiscalYear {:type "integer", :minimum 1900, :maximum 2200},
+     :sourcing
+     {:type "string",
+      :enum [":authoritative" ":representative" ":synthesized"],
+      :description
+      "G5 provenance: parsed-XBRL / rounded-headline / kanjo-derived ratio."},
+     :form
+     {:type "string",
+      :description "Filing form, e.g. :yuho :10-K :20-F."},
+     :companyName {:type "string", :maxLength 200},
+     :company
+     {:type "string",
+      :description
+      "Shared org.corp.* entity id (same entity kabuto/tsumugi hold)."},
+     :supersededBy
+     {:type "string",
+      :description
+      "rkey/uri of a later 訂正報告書 fact that restates this one (G11 — history, never deletion)."}}}}}}

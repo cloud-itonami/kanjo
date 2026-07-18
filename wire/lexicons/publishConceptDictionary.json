@@ -1,0 +1,50 @@
+{
+  "lexicon": 1,
+  "id": "com.etzhayyim.kanjo.publishConceptDictionary",
+  "defs": {
+    "main": {
+      "type": "procedure",
+      "description": "Publish the canonical concept DICTIONARY (:fin.concept/*) — the GAAP-normalization map that lands JP-GAAP (jppfs_cor / jpcrp_cor), US-GAAP (us-gaap:*) and IFRS (ifrs-full:*) taxonomy elements onto one comparable canonical concept. The :synthesized normalization layer (kanjō G5). Honest where standards are NOT comparable (e.g. 経常利益 / ordinary-income is JGAAP-only — carries a note forbidding cross-standard comparison).",
+      "input": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["concepts", "generatedAt"],
+          "properties": {
+            "concepts": {
+              "type": "array",
+              "description": "the canonical concept records",
+              "items": { "type": "ref", "ref": "#concept" }
+            },
+            "generatedAt": { "type": "string", "format": "datetime" }
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "ok": { "type": "boolean" },
+            "conceptCount": { "type": "integer" },
+            "dictionaryCid": { "type": "string", "description": "content-address of the published concept dictionary" }
+          }
+        }
+      }
+    },
+    "concept": {
+      "type": "object",
+      "description": "one canonical-concept record (:fin.concept/*) with the source taxonomy elements that normalize into it",
+      "required": ["concept", "statement", "label"],
+      "properties": {
+        "concept": { "type": "string", "description": ":fin.concept/id, e.g. \"revenue\"" },
+        "statement": { "type": "string", "enum": ["bs", "pl", "cf", "eps"] },
+        "label": { "type": "string", "description": "human label, e.g. \"Revenue / 売上高\"" },
+        "jgaap": { "type": "string", "description": "comma-joined EDINET taxonomy elements that map into this concept" },
+        "usgaap": { "type": "string", "description": "comma-joined us-gaap elements" },
+        "ifrs": { "type": "string", "description": "comma-joined ifrs-full elements" },
+        "note": { "type": "string", "description": "comparability caveat (e.g. JGAAP-only)" }
+      }
+    }
+  }
+}

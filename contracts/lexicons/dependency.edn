@@ -1,0 +1,56 @@
+{:lexicon 1,
+ :id "com.etzhayyim.kanjo.dependency",
+ :description
+ "One DISCLOSED economic-dependency edge between two companies (or a company and a customer/supplier/geography it named in its own filing). Non-adjudicating (G2): an observation of what the filer itself disclosed (e.g. a customer-concentration note, a segment, a major-supplier disclosure) — never an inferred or scored relationship, never a verdict. The supply-chain / world-economy face shared with kabuto (兜).",
+ :defs
+ {:main
+  {:type "record",
+   :key "tid",
+   :record
+   {:type "object",
+    :required ["from" "relation" "sourcing" "createdAt"],
+    :properties
+    {:basisFact
+     {:type "string",
+      :description
+      "rkey/uri of the com.etzhayyim.kanjo.disclosure fact this edge is grounded in."},
+     :createdAt {:type "string", :format "datetime"},
+     :source
+     {:type "string",
+      :enum
+      [":edinet"
+       ":edgar"
+       ":companies-house"
+       ":eu-oam"
+       ":dart"
+       ":cninfo"]},
+     :toName {:type "string", :maxLength 200},
+     :docCid
+     {:type "string", :description "IPFS CID of the source filing."},
+     :share
+     {:type "string",
+      :description
+      "Disclosed share as a decimal string when the filer quantified it (e.g. concentration %); omitted otherwise."},
+     :from
+     {:type "string",
+      :description "Disclosing company — org.corp.* id."},
+     :fiscalYear {:type "integer", :minimum 1900, :maximum 2200},
+     :sourcing
+     {:type "string",
+      :enum [":authoritative" ":representative" ":synthesized"]},
+     :relation
+     {:type "string",
+      :enum
+      [":customer-concentration"
+       ":supplier"
+       ":customer"
+       ":segment"
+       ":geography"
+       ":subsidiary"
+       ":equity-method"],
+      :description "The kind of dependency the FILER disclosed."},
+     :to
+     {:type "string",
+      :description
+      "Counterparty org.corp.* id when the filer named it; omitted when the disclosure is unnamed (e.g. 'one customer >10% of revenue')."},
+     :fromName {:type "string", :maxLength 200}}}}}}

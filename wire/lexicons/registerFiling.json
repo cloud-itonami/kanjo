@@ -1,0 +1,45 @@
+{
+  "lexicon": 1,
+  "id": "com.etzhayyim.kanjo.registerFiling",
+  "defs": {
+    "main": {
+      "type": "procedure",
+      "description": "Assert a PRIMARY public-disclosure filing into the kotoba Datom log (:fin.filing/*). Tier-A primary disclosure ONLY — JP EDINET 有価証券報告書 / US SEC EDGAR 10-K/20-F / UK Companies House / EU OAM (kanjō G1). NEVER 会社四季報 or a paid commercial terminal (Charter Rider §2(e)+§2(c)). Read the filing, never the terminal.",
+      "input": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["filingId", "companyId", "source", "form", "fiscalYear", "periodType", "periodEnd", "currency", "accounting", "sourcing", "observedAt"],
+          "properties": {
+            "filingId": { "type": "string", "description": ":fin.filing/id, e.g. \"fil.jp.edinet.toyota.2024\" or \"fil.us.edgar.apple.2024\"" },
+            "companyId": { "type": "string", "description": ":company/id (kabuto / tsumugi org.corp.* space), e.g. \"org.corp.jp.toyota\"" },
+            "source": { "type": "string", "enum": ["edinet", "edgar", "companies-house", "eu-oam"], "description": "primary-disclosure system (Tier-A only — NEVER shikiho / bloomberg / a paid terminal)" },
+            "form": { "type": "string", "enum": ["yuho", "hanki", "shihanki", "teisei", "10-K", "10-Q", "20-F", "8-K", "annual-accounts"], "description": ":teisei = 訂正報告書 (a restatement)" },
+            "fiscalYear": { "type": "integer", "description": "year the reported period ENDS in, e.g. 2024" },
+            "periodType": { "type": "string", "enum": ["annual", "half", "quarter"] },
+            "periodStart": { "type": "string", "format": "datetime", "description": "ISO-8601 period start" },
+            "periodEnd": { "type": "string", "format": "datetime", "description": "ISO-8601 period end (決算日)" },
+            "filedDate": { "type": "string", "format": "datetime" },
+            "accession": { "type": "string", "description": "source accession / docID (EDINET docID, EDGAR accession-number) for re-fetch / verification" },
+            "docCid": { "type": "string", "description": "IPFS CIDv1 of the source XBRL / PDF (DataLad-pinned, 80-data/corporate-financials; G8). Empty when no document fetched" },
+            "currency": { "type": "string", "enum": ["jpy", "usd", "eur", "gbp"], "description": "reporting currency keyword without colon" },
+            "accounting": { "type": "string", "enum": ["jgaap", "ifrs", "usgaap", "sec-jgaap"], "description": "accounting standard the filing uses" },
+            "sourcing": { "type": "string", "enum": ["authoritative", "representative", "synthesized"], "description": "kanjō G5 sourcing honesty (:authoritative = parsed from the filing's XBRL)" },
+            "observedAt": { "type": "string", "format": "datetime" }
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "ok": { "type": "boolean" },
+            "filingId": { "type": "string" },
+            "datomCid": { "type": "string", "description": "content-address of the committed :fin.filing Datom" }
+          }
+        }
+      }
+    }
+  }
+}

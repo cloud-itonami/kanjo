@@ -1,0 +1,71 @@
+{
+  "lexicon": 1,
+  "id": "com.etzhayyim.kanjo.publishIntelReport",
+  "defs": {
+    "main": {
+      "type": "procedure",
+      "description": "Publish an AGGREGATE-FIRST 決算 intel report + the derived metrics / aggregates (:fin.metric/* + :fin.agg/*, all :synthesized) into the kotoba Datom log. NON-ADJUDICATING (G2) + NO investment advice (G4): every figure is a company-disclosed value or a transparent ratio of disclosed values. Metrics/aggregates are NEVER re-ingested as disclosed facts (G5); Σ aggregates are coverage-bounded (read against n), never a market total; cross-currency sums are NOT computed (no FX layer, R0).",
+      "input": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["reportMarkdown", "generatedAt"],
+          "properties": {
+            "reportMarkdown": { "type": "string", "description": "the aggregate-first report body (out/intel-report.md)" },
+            "metrics": {
+              "type": "array",
+              "description": "derived per-company ratios / YoY (:fin.metric/*, :synthesized)",
+              "items": { "type": "ref", "ref": "#metric" }
+            },
+            "aggregates": {
+              "type": "array",
+              "description": "sector / currency aggregates (:fin.agg/*, :synthesized, coverage-honest)",
+              "items": { "type": "ref", "ref": "#aggregate" }
+            },
+            "generatedAt": { "type": "string", "format": "datetime" }
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "ok": { "type": "boolean" },
+            "reportCid": { "type": "string" },
+            "metricCount": { "type": "integer" },
+            "aggregateCount": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "description": "one derived per-company ratio / YoY (:fin.metric/*, always :synthesized)",
+      "required": ["metricId", "companyId", "fiscalYear", "kind", "valueBp"],
+      "properties": {
+        "metricId": { "type": "string" },
+        "companyId": { "type": "string" },
+        "fiscalYear": { "type": "integer" },
+        "kind": { "type": "string", "enum": ["operating-margin", "net-margin", "gross-margin", "roe", "roa", "equity-ratio", "current-ratio", "revenue-yoy", "operating-income-yoy", "net-income-yoy"] },
+        "valueBp": { "type": "integer", "description": "the ratio in BASIS POINTS (fraction × 10000, implied units — e.g. 1180 = 11.8%). Integer to satisfy the implied-units rule; a YoY decline is negative" },
+        "basis": { "type": "string", "description": "the fact ids the metric was derived from (audit trail)" }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "description": "one sector / currency aggregate (:fin.agg/*, always :synthesized, coverage-honest)",
+      "required": ["aggId", "dimension", "key", "fiscalYear", "concept", "sum", "n"],
+      "properties": {
+        "aggId": { "type": "string" },
+        "dimension": { "type": "string", "enum": ["sector", "country", "exchange"] },
+        "key": { "type": "string" },
+        "fiscalYear": { "type": "integer" },
+        "concept": { "type": "string" },
+        "sum": { "type": "integer", "description": "Σ across ingested members as an INTEGER in the scale units of the concept (implied units) — NOT a market total (G5)" },
+        "currency": { "type": "string", "enum": ["jpy", "usd", "eur", "gbp"], "description": "currency of the sum (aggregates are never summed across currencies — no FX layer, R0)" },
+        "n": { "type": "integer", "description": "coverage denominator — read every aggregate against n" }
+      }
+    }
+  }
+}

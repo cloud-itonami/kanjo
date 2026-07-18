@@ -29,7 +29,7 @@ the vendor *compilation* of them is not. **We read the filing, never the termina
 
 Non-adjudicating (G2) and **no investment advice** (G4): no ratings, no valuations, no buy/sell, no
 forecasts. kanjō records what the company disclosed and the transparent arithmetic of it — a
-transparency map, never a verdict or recommendation. (See `manifest.jsonld` gates G1–G12, non-goals
+transparency map, never a verdict or recommendation. (See `manifest.edn` gates G1–G12, non-goals
 N1–N8.)
 
 ## Run

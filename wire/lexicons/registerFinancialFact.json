@@ -1,0 +1,44 @@
+{
+  "lexicon": 1,
+  "id": "com.etzhayyim.kanjo.registerFinancialFact",
+  "defs": {
+    "main": {
+      "type": "procedure",
+      "description": "Assert ONE disclosed financial line item (:fin.fact/*) into the kotoba Datom log, linked to its :fin.filing and a CANONICAL concept (normalized across JP-GAAP / US-GAAP / IFRS). Records what the company DISCLOSED — kanjō is NON-ADJUDICATING (G2) and gives NO investment advice / NO rating / NO forecast (G4). A restatement (訂正) is asserted as a NEW fact with supersededBy on the prior one; the original Datom is RETAINED (非終末論, G11).",
+      "input": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["factId", "filingId", "companyId", "statement", "concept", "conceptRaw", "value", "unit", "scale", "context", "periodEnd", "sourcing", "observedAt"],
+          "properties": {
+            "factId": { "type": "string", "description": ":fin.fact/id, e.g. \"fact.org.corp.jp.toyota.2024.pl.revenue.consolidated\"" },
+            "filingId": { "type": "string", "description": "→ :fin.filing/id this fact was parsed from" },
+            "companyId": { "type": "string", "description": "→ :company/id (denormalized for AVET lookup)" },
+            "statement": { "type": "string", "enum": ["bs", "pl", "cf", "eps"], "description": "貸借対照表 / 損益計算書 / キャッシュフロー / per-share" },
+            "concept": { "type": "string", "enum": ["revenue", "gross-profit", "operating-income", "ordinary-income", "pretax-income", "net-income", "total-assets", "current-assets", "total-liabilities", "current-liabilities", "total-equity", "cash-and-equivalents", "cfo", "cfi", "cff", "capex", "eps"], "description": "CANONICAL concept (concept_map). ordinary-income (経常利益) is JGAAP-only — do NOT cross-compare across standards" },
+            "conceptRaw": { "type": "string", "description": "the SOURCE taxonomy element the concept was mapped from, e.g. \"jppfs_cor:NetSales\", \"us-gaap:NetIncomeLoss\", \"ifrs-full:Revenue\" (audit, G5)" },
+            "value": { "type": "integer", "description": "disclosed magnitude as an INTEGER in `scale` units of `unit` (implied units — mirrors the filing verbatim when :authoritative). For per-share / ratio concepts (eps) the value is an implied ×100 minor unit (sen / basis points) to stay integer" },
+            "unit": { "type": "string", "enum": ["jpy", "usd", "eur", "gbp", "shares", "ratio", "pure"] },
+            "scale": { "type": "string", "enum": ["ones", "thousands", "millions", "billions"], "description": "multiplier on value (monetary facts conventionally :millions)" },
+            "context": { "type": "string", "enum": ["consolidated", "nonconsolidated"], "description": "連結 / 単体 — consolidated preferred for comparison" },
+            "periodEnd": { "type": "string", "format": "datetime" },
+            "supersededBy": { "type": "string", "description": "→ :fin.fact/id of a later :teisei (restatement) fact, when this figure was corrected. FORWARD pointer only — the original Datom is retained (G11)" },
+            "sourcing": { "type": "string", "enum": ["authoritative", "representative", "synthesized"], "description": "G5; :synthesized is NOT permitted for a disclosed fact (only for :fin.metric / :fin.agg)" },
+            "observedAt": { "type": "string", "format": "datetime" }
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "ok": { "type": "boolean" },
+            "factId": { "type": "string" },
+            "datomCid": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

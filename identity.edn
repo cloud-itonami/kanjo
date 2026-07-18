@@ -1,0 +1,3 @@
+{:repository/id "com-etzhayyim-kanjo" :repository/type :actor
+ :actor/id :kanjo :actor/did "did:web:etzhayyim.com:kanjo"
+ :canonical-format :edn}

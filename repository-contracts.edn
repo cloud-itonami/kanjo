@@ -1,0 +1,4 @@
+{:repository/layout :standalone :canonical-data :edn
+ :external-formats {:root "wire" :formats #{:json :json-ld}}
+ :source-roots ["src"] :test-roots ["test"]
+ :deprecated-languages #{:go :tinygo :python}}
