@@ -10,11 +10,10 @@
 
   Convention parity: maps carry STRING `\":fin.…/…\"` keys (the Python shape),
   values that are keywords stay `\":foo\"` strings. Pure transforms; the live
-  EDGAR fetch (G7-gated) and file/network I/O sit at the JVM edge."
+  EDGAR fetch is G7-gated and requires an explicitly injected host capability;
+  file/network I/O stays outside this portable namespace."
   (:require [clojure.string :as str]
-            [kanjo.methods.concept-map :as cmap]
-            #?(:clj [clojure.java.io :as io]))
-  #?(:clj (:import [java.io File])))
+            [kanjo.methods.concept-map :as cmap]))
 
 ;; CIK → org.corp.* id (shared kabuto/tsumugi space)
 (def edgar-cik->org
@@ -162,25 +161,36 @@
                (apply concat ingested-fact-lists))]
     (vec (vals by-id))))
 
-;; ── G7-gated live fetch (JVM edge) ──────────────────────────────────────────
+;; ── G7-gated live fetch (explicit host edge) ────────────────────────────────
 
 #?(:clj
    (defn fetch-edgar
-     "LIVE EDGAR companyfacts fetch — G7-gated, single polite request.
+     "Parse one LIVE EDGAR response supplied by an explicit host capability.
+
      Refuses (throws) unless KANJO_OPERATOR_GATE=1 (mirrors the Python sys.exit guard
-     whose message the invariant test matches on 'G7'/'gate'/'refus')."
-     [cik]
-     (when (not= (System/getenv "KANJO_OPERATOR_GATE") "1")
-       (throw (ex-info (str "refused: live fetch requires KANJO_OPERATOR_GATE=1 "
-                            "(G7 Council+operator gate). Offline mode reads data/ingest/*.json.")
-                       {:kanjo/gate "G7"})))
-     (let [cik (if (< (count cik) 10) (str (apply str (repeat (- 10 (count cik)) "0")) cik) cik)
-           url (str "https://data.sec.gov/api/xbrl/companyfacts/CIK" cik ".json")
-           org (get edgar-cik->org cik (str "org.corp.us.cik" cik))
-           parse-json (requiring-resolve 'clojure.data.json/read-str)
-           conn (doto (.openConnection (java.net.URL. url))
-                  (.setRequestProperty "User-Agent" "etzhayyim-kanjo research jun@etzhayyim.group")
-                  (.setConnectTimeout 30000)
-                  (.setReadTimeout 30000))]
-       (with-open [r (io/reader (.getInputStream conn))]
-         (parse-edgar-companyfacts (parse-json (slurp r)) org)))))
+     whose message the invariant test matches on 'G7'/'gate'/'refus'). The
+     capability receives a data-only request map and must return a decoded JSON
+     map; this namespace never resolves a codec or opens a network connection."
+     ([cik]
+      (fetch-edgar nil cik))
+     ([fetch-json cik]
+      (when (not= (System/getenv "KANJO_OPERATOR_GATE") "1")
+        (throw (ex-info (str "refused: live fetch requires KANJO_OPERATOR_GATE=1 "
+                             "(G7 Council+operator gate). Offline mode reads data/ingest/*.json.")
+                        {:kanjo/gate "G7"})))
+      (when-not (fn? fetch-json)
+        (throw (ex-info "refused: live fetch requires an explicit fetch-json capability"
+                        {:kanjo/gate "G7" :kanjo/capability :fetch-json})))
+      (let [cik (if (< (count cik) 10) (str (apply str (repeat (- 10 (count cik)) "0")) cik) cik)
+            url (str "https://data.sec.gov/api/xbrl/companyfacts/CIK" cik ".json")
+            org (get edgar-cik->org cik (str "org.corp.us.cik" cik))
+            request {:url url
+                     :headers {"User-Agent" "etzhayyim-kanjo research jun@etzhayyim.group"}
+                     :connect-timeout-ms 30000
+                     :read-timeout-ms 30000}
+            response (fetch-json request)]
+        (when-not (map? response)
+          (throw (ex-info "fetch-json capability must return a decoded JSON map"
+                          {:kanjo/capability :fetch-json
+                           :kanjo/response-type (type response)})))
+        (parse-edgar-companyfacts response org)))))
