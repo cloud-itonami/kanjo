@@ -52,7 +52,10 @@
     "com.etzhayyim.kanjo.registerFiling",
     "com.etzhayyim.kanjo.registerFinancialFact",
     "com.etzhayyim.kanjo.publishConceptDictionary",
-    "com.etzhayyim.kanjo.publishIntelReport"
+    "com.etzhayyim.kanjo.publishIntelReport",
+    "com.etzhayyim.kanjo.disclosure",
+    "com.etzhayyim.kanjo.dependency",
+    "com.etzhayyim.kanjo.intelReport"
   ],
   "display": {
     "did": "did:web:etzhayyim.com:actor:kanjo",
