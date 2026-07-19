@@ -1,0 +1,6 @@
+{:canonical-format :edn
+ :canonical-path "contracts/lexicons"
+ :generated-path "wire/contracts/lexicons"
+ :generator {:repository "etzhayyim/com-etzhayyim-lexicons-bundle"
+             :revision "c78dfb9764c952b770d47553cd110768d6f7c336"
+             :script "scripts/project-edn-lexicons.clj"}}
