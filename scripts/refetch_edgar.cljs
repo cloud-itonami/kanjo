@@ -44,10 +44,21 @@
   cannot be confidently resolved is logged and SKIPPED, never fabricated.
 
   Usage:
-    nbb --classpath src scripts/refetch_edgar.cljs [--dry-run] [--data PATH]
+    nbb --classpath src scripts/refetch_edgar.cljs [--dry-run] [--data PATH] [--summary-path PATH]
 
-  --dry-run   resolve + print the CIK table only; no network fetch, no file write.
-  --data PATH override data/facts.merged.kotoba.edn (mainly for tests)."
+  --dry-run       resolve + print the CIK table only; no network fetch, no file write.
+  --data PATH     override data/facts.merged.kotoba.edn (mainly for tests).
+  --summary-path PATH
+                  ALSO write a clean, git-diffable Markdown run summary to PATH
+                  (facts/filings before -> after, element-priority tie-break /
+                  rejected-candidate count, and which company+fiscal-year facts
+                  actually changed :fin.fact/value vs the prior commit) — this
+                  is the SAME data already printed to stdout above, reshaped for
+                  a CI PR body (see .github/workflows/edgar-refresh.yml) rather
+                  than re-derived. Not written on --dry-run, on REFUSED runs, or
+                  when nothing actually changed (see the no-write short-circuit
+                  in -main — a CI workflow's `git diff` should then be empty and
+                  correctly skip opening a PR)."
   (:require [kanjo.methods.ingest :as ing]
             [kanjo.methods.kanjo-edn :as kedn]
             [clojure.string :as str]
@@ -220,9 +231,85 @@
     (.writeFileSync fs (str path ".bak") (.readFileSync fs path "utf8") "utf8")
     (.writeFileSync fs path (str header "\n" body "\n]\n") "utf8")))
 
+;; ── changed-value diff (old commit vs this run's merge) ─────────────────────
+;; company+fiscal-year is parsed from the fact id's own convention
+;; ("fact.<org-id>.<fy>.<statement>.<concept>.<context>", see row->edn-line /
+;; the seed generator this mirrors) rather than a fabricated join — a fact id
+;; that doesn't match this shape is skipped from the report (never guessed).
+(defn- fact-id->company+fy [id]
+  (let [segs (str/split id #"\.")]
+    ;; "fact" "org" "corp" "us" "<ticker>" "<fy>" ... -> company = "org.corp.us.<ticker>"
+    (when (and (= (first segs) "fact") (>= (count segs) 6))
+      {:company (str/join "." (subvec (vec segs) 1 5)) :fiscal-year (nth segs 5)})))
+
+(defn- changed-value-facts
+  "old-rows / merged-rows -> sorted [{:company :fiscal-year :old-value :new-value}]
+  for every :fin.fact/id present in BOTH with a DIFFERENT :fin.fact/value —
+  i.e. an existing fact whose value this run's re-parse corrected, not a
+  newly-added fact (those are covered by the plain fact-count delta above)."
+  [old-rows merged-rows]
+  (let [old-by-id (into {} (keep (fn [r] (when-let [id (get r ":fin.fact/id")] [id r]))) old-rows)]
+    (->> merged-rows
+         (keep (fn [r]
+                 (when-let [id (get r ":fin.fact/id")]
+                   (when-let [old (get old-by-id id)]
+                     (let [old-v (get old ":fin.fact/value") new-v (get r ":fin.fact/value")]
+                       (when (not= old-v new-v)
+                         (merge (fact-id->company+fy id) {:id id :old-value old-v :new-value new-v})))))))
+         (sort-by (juxt :company :fiscal-year))
+         vec)))
+
+(defn- write-summary! [path {:keys [data-path old-org-count resolved-count skipped
+                                     ok-count fetched-count errors rejected
+                                     old-fact-count new-fact-count old-filing-count
+                                     new-filing-count changed]}]
+  (let [md (str
+            "# kanjō EDGAR refresh — " (.toISOString (js/Date.)) "\n\n"
+            "Re-fetched + re-parsed all EDGAR-sourced companies already in `" data-path
+            "` (no scope expansion — G7 single-polite-request re-derivation).\n\n"
+            "## Summary\n\n"
+            "- companies: " old-org-count " distinct EDGAR-sourced companies\n"
+            "- resolved to CIK: " resolved-count "/" old-org-count
+            (when (seq skipped) (str " (" (count skipped) " skipped — could not confidently resolve, NOT fabricated)")) "\n"
+            "- fetched OK: " fetched-count "/" ok-count
+            (when (seq errors) (str "  (" (count errors) " error" (when (> (count errors) 1) "s") ")")) "\n"
+            "- facts: " old-fact-count " -> " new-fact-count
+            " (" (- new-fact-count old-fact-count) ")\n"
+            "- filings: " old-filing-count " -> " new-filing-count
+            " (" (- new-filing-count old-filing-count) ")\n"
+            "- element-priority tie-breaks resolved this run (multiple source elements -> "
+            "same canonical concept for the same company+fy — see docstring): " (count rejected) "\n"
+            "- rejected candidates (the losing side of each tie-break above — same set, "
+            "not double-counted): " (count rejected) "\n"
+            "- existing facts whose value CHANGED vs the prior commit: " (count changed) "\n\n"
+            (when (seq errors)
+              (str "## Fetch errors\n\n"
+                   (str/join "\n" (map #(str "- " (:org-id %) " (" (:ticker %) "): " (:error %)) errors))
+                   "\n\n"))
+            (when (seq rejected)
+              (str "## Element-priority tie-breaks (kept vs rejected)\n\n"
+                   (str/join "\n" (map (fn [r] (str "- " (get r ":fin.fact/id") ": kept "
+                                                     (get r ":kept-concept-raw") "=" (get r ":kept-value")
+                                                     ", rejected " (get r ":rejected-concept-raw") "="
+                                                     (get r ":rejected-value")))
+                                        rejected))
+                   "\n\n"))
+            (if (seq changed)
+              (str "## Companies/fiscal-years whose facts changed value\n\n"
+                   "| company | fiscal-year | old value | new value | fact id |\n"
+                   "|---|---|---|---|---|\n"
+                   (str/join "\n" (map (fn [{:keys [company fiscal-year old-value new-value id]}]
+                                          (str "| " company " | " fiscal-year " | " old-value
+                                               " | " new-value " | `" id "` |"))
+                                        changed))
+                   "\n")
+              "## Companies/fiscal-years whose facts changed value\n\n_none — all corrections were additive (new facts only)._\n"))]
+    (.writeFileSync fs path md "utf8")))
+
 (defn -main [args]
   (let [dry-run? (some #{"--dry-run"} args)
         data-path (or (second (drop-while #(not= "--data" %) args)) DEFAULT-DATA-PATH)
+        summary-path (second (drop-while #(not= "--summary-path" %) args))
         old-rows (read-data data-path)
         old-fact-count (count (filter #(contains? % ":fin.fact/id") old-rows))
         old-filing-count (count (filter #(contains? % ":fin.filing/id") old-rows))
@@ -255,10 +342,36 @@
                 new-filing-count (count (filter #(contains? % ":fin.filing/id") merged))]
             (println (str "\nfacts " old-fact-count " -> " new-fact-count
                           ", filings " old-filing-count " -> " new-filing-count))
-            (if (or (< new-fact-count old-fact-count) (< new-filing-count old-filing-count))
+            (cond
+              (or (< new-fact-count old-fact-count) (< new-filing-count old-filing-count))
               (do (println "REFUSED: merge would shrink the dataset; leaving file untouched.")
                   (js/process.exit 1))
-              (do (write-data! data-path merged)
-                  (println (str "wrote " data-path " (.bak backup of prior content written alongside)"))))))))))
 
-(-main (vec (drop 2 (or js/process.argv []))))
+              ;; Row content is byte-for-byte identical to the prior commit (merge-rows'
+              ;; hash-map iteration order is a pure function of the id set, so this holds
+              ;; whenever no id's value changed AND no id was added/removed) — DON'T touch
+              ;; the file at all, not even the header timestamp. A CI workflow's
+              ;; `git diff --stat -- data-path` (see .github/workflows/edgar-refresh.yml)
+              ;; depends on this: write-data!'s header always embeds the current
+              ;; timestamp, so writing unconditionally would make every run look "changed"
+              ;; and open a no-op PR every week even when EDGAR itself returned nothing new.
+              (= merged old-rows)
+              (println "\nno change: every id's value is identical to the prior commit; leaving file (and its timestamp header) untouched.")
+
+              :else
+              (let [changed (changed-value-facts old-rows merged)]
+                (write-data! data-path merged)
+                (println (str "wrote " data-path " (.bak backup of prior content written alongside)"))
+                (println (str "\nexisting facts whose value changed vs the prior commit: " (count changed)))
+                (when summary-path
+                  (write-summary! summary-path
+                                  {:data-path data-path :old-org-count (count org-ids)
+                                   :resolved-count (count ok) :skipped skipped
+                                   :ok-count (count ok) :fetched-count (count per-company)
+                                   :errors errors :rejected rejected
+                                   :old-fact-count old-fact-count :new-fact-count new-fact-count
+                                   :old-filing-count old-filing-count :new-filing-count new-filing-count
+                                   :changed changed})
+                  (println (str "wrote " summary-path)))))))))))
+
+(-main (vec *command-line-args*))
