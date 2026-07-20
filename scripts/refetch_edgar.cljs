@@ -2,11 +2,16 @@
 (ns refetch-edgar
   "kanjō 勘定 — G7-authorised live SEC EDGAR re-fetch + re-parse of every EDGAR-sourced
   company already in data/facts.merged.kotoba.edn, using the FIXED
-  kanjo.methods.ingest/parse-edgar-companyfacts (2026-07-20 duration-guard fix:
-  ADR/commit — see src/kanjo/methods/ingest.cljc MIN-ANNUAL-DURATION-DAYS /
-  MAX-ANNUAL-DURATION-DAYS). Corrects previously-wrong :authoritative facts caused by
-  a quarterly-duration point silently passing the old fp:\"FY\"/form:\"10-K\" filter
-  (fp/form/fy describe the SOURCE FILING, not any one data point's own duration).
+  kanjo.methods.ingest/parse-edgar-companyfacts. Two fixes now live in that function:
+  (1, 2026-07-20 duration-guard fix) rejects a quarterly-duration point that silently
+  passes the fp:\"FY\"/form:\"10-K\" filter (fp/form/fy describe the SOURCE FILING,
+  not any one data point's own duration); (2, 2026-07-20 follow-up,
+  element-priority fix) when MULTIPLE source elements map onto the same canonical
+  concept for the same company+fy (e.g. revenue's Revenues vs SalesRevenueNet —
+  see `element-priority` / the evidence trail above it in ingest.cljc), resolves
+  the collision by value-magnitude or a verified name-based override instead of
+  the previous 'last wins, arbitrary w.r.t. JSON iteration order' behavior.
+  Corrects previously-wrong :authoritative facts from both causes.
 
   Requires (never duplicates) the same pure parse-edgar-companyfacts /
   kanjo.methods.kanjo-edn reader used by src/kanjo/methods/ingest.cljc, so the fix and
@@ -163,7 +168,7 @@
 
 (defn- process-companies [entries]
   (p/loop [remaining entries
-           acc {:filings [] :facts [] :errors [] :per-company []}]
+           acc {:filings [] :facts [] :errors [] :per-company [] :rejected []}]
     (if (empty? remaining)
       acc
       (p/let [{:keys [org-id ticker cik]} (first remaining)
@@ -174,12 +179,20 @@
                        (fn [err] {:ok false :error (.-message err)}))
               _ (delay-ms REQUEST-DELAY-MS nil)]
         (if (:ok outcome)
-          (let [[filings facts] (ing/parse-edgar-companyfacts (:obj outcome) org-id)]
+          (let [[filings facts rejected] (ing/parse-edgar-companyfacts (:obj outcome) org-id)]
             (println (str "    +" (count filings) " filings / +" (count facts) " facts"))
+            ;; element-priority collision audit trail (ingest.cljc resolve-fact-collisions) --
+            ;; not written to data-path, printed here so a same-canon/company/fy tie-break is
+            ;; never silent (G11 restatement-as-history ethos: log what lost, and why).
+            (doseq [r rejected]
+              (println (str "    tie-break " (get r ":fin.fact/id") ": kept "
+                            (get r ":kept-concept-raw") "=" (get r ":kept-value")
+                            ", rejected " (get r ":rejected-concept-raw") "=" (get r ":rejected-value"))))
             (p/recur (rest remaining)
                      (-> acc
                          (update :filings into filings)
                          (update :facts into facts)
+                         (update :rejected into rejected)
                          (update :per-company conj {:org-id org-id :ticker ticker :cik cik
                                                      :filings (count filings) :facts (count facts)}))))
           (do
@@ -231,10 +244,12 @@
         (println "\n--dry-run: no fetch, no write.")
         (p/let [_ (println (str "\nFetching " (count ok) " companyfacts documents, "
                                  REQUEST-DELAY-MS "ms apart…"))
-                {:keys [filings facts errors per-company]} (process-companies ok)]
+                {:keys [filings facts errors per-company rejected]} (process-companies ok)]
           (println (str "\nFetched OK: " (count per-company) "/" (count ok)
                         (when (seq errors) (str "  (errors: " (count errors) ")"))))
           (doseq [e errors] (println (str "  ERROR " (:org-id e) " (" (:ticker e) "): " (:error e))))
+          (println (str "\nelement-priority tie-breaks (same canon/company/fy, multiple source "
+                        "elements): " (count rejected) " (detail printed per-company above)"))
           (let [merged (merge-rows old-rows (concat filings facts))
                 new-fact-count (count (filter #(contains? % ":fin.fact/id") merged))
                 new-filing-count (count (filter #(contains? % ":fin.filing/id") merged))]

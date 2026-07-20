@@ -98,23 +98,196 @@
 
 ;; ── parsers ─────────────────────────────────────────────────────────────────
 
-(defn- dedup-latest
-  "Keep one fact per id (EDGAR repeats a concept across filings) — last wins,
-  iteration order preserved (matches Python dict insertion semantics)."
+;; ── element-priority tie-break (same canonical concept, same company+fy) ────
+;; concept_map.cljc maps MULTIPLE distinct source elements onto the SAME
+;; canonical concept (e.g. revenue's usgaap list is
+;; ["RevenueFromContractWithCustomerExcludingAssessedTax" "Revenues" "SalesRevenueNet"];
+;; total-equity's is ["StockholdersEquity"
+;; "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"]).
+;; Because :fin.fact/id is built from (org, fy, canon) alone — no element/tag
+;; component — facts from DIFFERENT elements for the SAME company+fy collide on the
+;; SAME id. The list order in concept_map.cljc was never written as a priority
+;; ranking (verified: for revenue, the FIRST-listed element
+;; "RevenueFromContractWithCustomerExcludingAssessedTax" is the one that turns out to
+;; need the LOWEST priority — see below), so "keep whichever the raw JSON iterates
+;; last" (the previous `dedup-latest`, order-arbitrary w.r.t. Clojure hash-map
+;; iteration of the parsed JSON) silently picked the wrong element for real
+;; companies: Oracle FY2010/2011 landed on SalesRevenueNet (a narrower,
+;; merchandise/product-only tag) instead of Revenues (the real total, ~10x larger);
+;; Costco FY2017 landed on SalesRevenueNet ($126,172M, net merchandise sales only)
+;; instead of Revenues ($129,025M, includes membership-fee income).
+;;
+;; Evidence trail (2026-07-20 live re-fetch + comparison across all 45 EDGAR-sourced
+;; companies in data/facts.merged.kotoba.edn, every real (canon, company, fy)
+;; collision found, not just the 2 companies above):
+;;
+;;  - "revenue" × {Revenues, SalesRevenueNet} — 19 real (non-tied) collisions
+;;    checked (Oracle FY2010/2011, Costco FY2010-2017, Caterpillar FY2009-2017,
+;;    GE FY2016/2017, Walmart FY2009-2018, P&G FY2014). Revenues is the larger
+;;    value AND the correct total in 18/19 (SalesRevenueNet is a narrower
+;;    product/segment-sales-only line in every one, confirmed against each
+;;    company's real reported total revenue). The ONE exception, P&G FY2014, is
+;;    the opposite: P&G's OWN "Revenues" XBRL tag for that period (accn
+;;    0000080424-14-000057) carries $29.4B — nowhere near P&G's real ~$83.1B
+;;    FY2014 total (a company-side XBRL tagging defect, not a narrow/broad
+;;    distinction) — while SalesRevenueNet correctly carries $83.062B. In BOTH
+;;    directions the LARGER value is the correct one, so plain
+;;    value-magnitude ("larger wins") resolves this pair correctly in all 19/19
+;;    cases checked, including the anomaly. No named-tag override needed here.
+;;
+;;  - "revenue" × {Revenues, RevenueFromContractWithCustomerExcludingAssessedTax}
+;;    — 50 real collisions checked. In 47/50, Revenues >= RevenueFromContract...
+;;    and Revenues is confirmed correct (e.g. Chevron: "Revenues" = the income
+;;    statement's "Total revenues and other income" subtotal;
+;;    RevenueFromContract... = the narrower "Sales and other operating revenues"
+;;    subtotal beneath it. Same pattern independently confirmed for Walmart,
+;;    Pfizer, GE). BUT in 3/50 (Mastercard FY2019/2020/2021), the LARGER value
+;;    (RevenueFromContract..., $23-30B) is WRONG — Mastercard's real reported
+;;    net revenue for those years ($16.883B/$15.301B/$18.884B, matching public
+;;    10-K figures) is the SMALLER "Revenues" tag; the larger
+;;    RevenueFromContract... point is a genuine same-duration, same-fy/fp/form
+;;    XBRL point in Mastercard's own companyfacts feed that does not correspond
+;;    to the company's total (most likely a gross/pre-rebate revenue-disclosure
+;;    row reusing the element without a distinguishing dimension in the
+;;    non-dimensional companyfacts API — a source-side XBRL-tagging ambiguity,
+;;    not something inferable from magnitude alone). A pure "larger wins" rule
+;;    would regress these 3 already-correct values. Revenues is correct 50/50
+;;    times this pair was checked (identical or the deliberately larger figure
+;;    in 47, and the deliberately SMALLER-but-correct figure in the 3 Mastercard
+;;    cases) — so this ONE pair gets an explicit NAME-based override instead of
+;;    magnitude (see `element-priority`).
+;;
+;;  - "total-equity" × {StockholdersEquity,
+;;    StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest} —
+;;    303 real collisions checked. The …IncludingNCI tag is larger (hence
+;;    magnitude-correct) in 291/303; in the other 12 (Boeing FY2024, Cisco
+;;    FY2016, PepsiCo FY2012-2017, Qualcomm FY2013-2016) …IncludingNCI is
+;;    SMALLER by a small amount that exactly equals each company's own
+;;    (negative) noncontrolling-interest balance for that year — i.e. those
+;;    companies have a small NCI deficit, so the total INCLUDING it is
+;;    genuinely less than the parent-only figure. …IncludingNCI is still the
+;;    definitionally correct "total equity" in every one of those 12 cases too
+;;    (ASC 810 requires consolidated total equity to include NCI; excluding a
+;;    negative NCI overstates the true total) — so a pure magnitude rule would
+;;    be wrong in exactly those 12/303, and this pair ALSO gets a NAME-based
+;;    override (…IncludingNCI always wins), verified correct in 303/303.
+;;
+;;  - No other canonical concept in concept_map.cljc's `usgaap` element lists has
+;;    more than one element (gross-profit / operating-income / pretax-income /
+;;    net-income / total-assets / current-assets / total-liabilities /
+;;    current-liabilities / cash-and-equivalents / cfo / cfi / cff / capex / eps
+;;    each map exactly one usgaap tag) — so no other concept can produce this
+;;    class of :fin.fact/id collision from parse-edgar-companyfacts today. If a
+;;    future concept_map.cljc edit adds a second usgaap element to one of those,
+;;    it falls through to the magnitude default below (undocumented, but no
+;;    worse than the pre-fix "arbitrary JSON order" behavior) until it is
+;;    checked against real data and (if needed) added to `element-priority`.
+(def element-priority
+  "Per-canonical-concept, per-source-element-pair NAME-based override — ONLY for
+  pairs explicitly verified (see the evidence trail above) against every real
+  co-occurrence found in a full live re-fetch of the 45 EDGAR-sourced companies in
+  data/facts.merged.kotoba.edn (2026-07-20). NOT a blanket 'prefer list-order' or
+  'prefer a specific tag globally' table — e.g. Revenues beats
+  RevenueFromContractWithCustomerExcludingAssessedTax here, but NOT
+  SalesRevenueNet (that pair uses the magnitude default instead, because the
+  P&G FY2014 evidence above shows a fixed 'prefer Revenues' rule would be wrong
+  there). {canon {raw-element-local-name rank}} — lower rank wins a collision
+  against any OTHER element also present in this canon's map; a collision
+  candidate whose element is NOT listed for this canon falls through to
+  magnitude (`resolve-fact-collisions`)."
+  {"revenue" {"Revenues" 0
+              "RevenueFromContractWithCustomerExcludingAssessedTax" 1}
+   "total-equity" {"StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest" 0
+                   "StockholdersEquity" 1}})
+
+(defn- raw-element
+  "\"us-gaap:Revenues\" -> \"Revenues\" (the bare source-taxonomy local name, as
+  stored on :fin.fact/concept-raw)."
+  [fact]
+  (last (str/split (get fact ":fin.fact/concept-raw" "") #":")))
+
+(defn- collision-winner
+  "Pick the surviving fact among 2+ facts colliding on the same :fin.fact/id (same
+  canonical concept, company, fy — different source elements). Uses the verified
+  NAME-based `element-priority` override when EVERY candidate's raw element is
+  listed for this canon; otherwise falls back to the magnitude default (the
+  LARGER :fin.fact/value wins — a broader/more-inclusive disclosure line is never
+  less than a narrower one it subsumes, for every real case checked that isn't
+  already carved out into `element-priority`). Deterministic on an exact-value tie
+  (keeps whichever appears first in `group`)."
+  [canon group]
+  (let [ranked (get element-priority canon)]
+    (if (and ranked (every? #(contains? ranked (raw-element %)) group))
+      (apply min-key #(get ranked (raw-element %)) group)
+      (reduce (fn [a b] (if (>= (get a ":fin.fact/value") (get b ":fin.fact/value")) a b)) group))))
+
+(defn- resolve-fact-collisions
+  "Group `facts` by :fin.fact/id; ids with exactly one fact pass through unchanged.
+  Two DIFFERENT collision shapes land on the same :fin.fact/id (no element/tag
+  component), and only one of them is the bug this fix targets:
+   1. the SAME source element repeated across multiple accessions/filings (EDGAR
+      re-discloses each fy as a prior-year comparative in every later 10-K,
+      sometimes restated) — pre-existing, NOT part of this fix's scope, so this
+      keeps the ORIGINAL `dedup-latest` behavior (last-in-source-order wins,
+      i.e. the most-recently-filed comparative) for a single element's own
+      repeats. 'Largest wins' would be WRONG here in general — a discontinued-
+      operations reclassification typically makes a LATER restated comparative
+      SMALLER (the divested unit's revenue is removed from continuing
+      operations), so magnitude is not a safe tie-break within one element.
+   2. DIFFERENT source elements mapped to the same canonical concept for the same
+      company+fy (the actual bug — see the evidence trail above
+      `element-priority`) — resolved via `collision-winner`, one candidate per
+      element (itself reduced via rule 1 first).
+  Never silently drops the losing candidate: returns [kept-facts rejected], where
+  `rejected` records id/kept/rejected element+value for every CROSS-element
+  collision (audit trail only — G11 restatement-as-history ethos: a rejected
+  disclosure is logged, not erased, even though only one row per id lands in the
+  graph itself; `rejected` is never merged back into filings/facts). Same-element
+  repeats are NOT logged to `rejected` (unchanged pre-existing behavior, not a new
+  tie-break decision)."
   [facts]
-  (let [seen (reduce (fn [m f] (assoc m (get f ":fin.fact/id") f)) (array-map) facts)]
-    (vec (vals seen))))
+  (let [groups (vals (reduce (fn [m f] (update m (get f ":fin.fact/id") (fnil conj []) f))
+                              (array-map) facts))]
+    (reduce
+     (fn [[kept rejected] group]
+       (let [per-element (vals (reduce (fn [m f] (update m (raw-element f) (fnil conj []) f))
+                                        (array-map) group))
+             ;; rule 1: within one element, last-in-source-order wins (unchanged
+             ;; pre-existing dedup-latest semantic; not logged as a tie-break).
+             candidates (mapv last per-element)]
+         (if (= 1 (count candidates))
+           [(conj kept (first candidates)) rejected]
+           ;; rule 2: 2+ DIFFERENT elements collide on this id -- the actual bug.
+           (let [canon (lstrip-colon (get (first candidates) ":fin.fact/concept" ""))
+                 winner (collision-winner canon candidates)
+                 losers (remove #(identical? % winner) candidates)]
+             [(conj kept winner)
+              (into rejected
+                    (map (fn [l]
+                           {":fin.fact/id" (get l ":fin.fact/id")
+                            ":fin.fact/company" (get l ":fin.fact/company")
+                            ":kept-concept-raw" (get winner ":fin.fact/concept-raw")
+                            ":kept-value" (get winner ":fin.fact/value")
+                            ":rejected-concept-raw" (get l ":fin.fact/concept-raw")
+                            ":rejected-value" (get l ":fin.fact/value")})
+                         losers))]))))
+     [[] []]
+     groups)))
 
 (defn parse-edgar-companyfacts
-  "SEC EDGAR companyfacts → [filings facts] (:authoritative).
+  "SEC EDGAR companyfacts → [filings facts rejected] (:authoritative).
   obj shape: obj['facts']['us-gaap'][Element]['units'][unit][ {end val fy fp form ...} ].
   Picks annual (fp == 'FY', form 10-K/20-F) AND, for duration/flow points (those
   carrying a \"start\" key), verifies [start,end] actually spans ~1 year
   (annual-duration?/MIN-ANNUAL-DURATION-DAYS..MAX-ANNUAL-DURATION-DAYS) — fp/form/fy
   describe the SOURCE FILING, not any one data point's own duration, so a quarterly
   footnote point embedded in the 10-K can otherwise pass this filter mislabeled as
-  annual. Instant points (no \"start\", e.g. total-assets) are unaffected. One fact per
-  (concept, fy)."
+  annual. Instant points (no \"start\", e.g. total-assets) are unaffected. One fact
+  per (concept, fy) — when multiple SOURCE ELEMENTS map to the same canonical
+  concept for the same company+fy, `resolve-fact-collisions`/`collision-winner`
+  picks the surviving one (see the evidence trail above `element-priority`);
+  `rejected` (3rd return value) is the audit trail of what lost and why, never
+  merged into `filings`/`facts`."
   ([obj org-id] (parse-edgar-companyfacts obj org-id nil))
   ([obj org-id want-fy]
    (let [gaap (get-in obj ["facts" "us-gaap"] {})
@@ -166,8 +339,9 @@
                               [filings (conj facts fact)])))))
                     [filings facts] points))
                  [filings facts] (get body "units" {})))))
-          [(array-map) []] gaap)]
-     [(vec (vals filings)) (dedup-latest facts)])))
+          [(array-map) []] gaap)
+         [kept rejected] (resolve-fact-collisions facts)]
+     [(vec (vals filings)) kept rejected])))
 
 (defn parse-edinet-elements
   "R0 EDINET adapter: pre-extracted element list → [filings facts] (jgaap/ifrs)."

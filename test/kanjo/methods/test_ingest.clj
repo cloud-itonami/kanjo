@@ -66,6 +66,158 @@
       (is (= (get f ":fin.fact/value") 100000.0))    ; annual value (base → millions), NOT the 30000.0 Q4 figure
       (is (= (get f ":fin.fact/sourcing") ":authoritative")))))
 
+;; Adversarial fixtures (2026-07-20 element-priority follow-up fix, same-family as
+;; the duration-guard fix above — see src/kanjo/methods/ingest.cljc
+;; `element-priority` / the evidence trail above it). Both elements below are
+;; genuinely annual (~365-day, or instant) points with the SAME fy/fp:"FY"/
+;; form:"10-K" — the duration guard does NOT reject either one. The bug this
+;; guards against: :fin.fact/id has no element/tag component, so two elements
+;; mapped to the same canonical concept for the same company+fy collide, and the
+;; OLD "last wins" behavior picked whichever the raw us-gaap map iterated last —
+;; arbitrary w.r.t. JSON key order, not a deliberate broad-vs-narrow choice.
+;;
+;; Case A (magnitude default correct): Revenues (broad, real total) vs
+;; SalesRevenueNet (narrow, product-sales-only) — mirrors the real Oracle
+;; FY2010/2011 and Costco FY2017 bug instances. The broader/LARGER value must
+;; survive regardless of which order the raw map lists the two elements in.
+(def ^:private edgar-obj-revenue-collision-order-a
+  {"cik" 999998
+   "facts" {"us-gaap" {"Revenues"
+                       {"units" {"USD" [{"fp" "FY" "form" "10-K" "fy" 2017
+                                         "end" "2017-08-31" "start" "2016-09-01"
+                                         "val" 129025000000 "accn" "broad" "filed" "2017-10-18"}]}}
+                       "SalesRevenueNet"
+                       {"units" {"USD" [{"fp" "FY" "form" "10-K" "fy" 2017
+                                         "end" "2017-08-31" "start" "2016-09-01"
+                                         "val" 126172000000 "accn" "narrow" "filed" "2017-10-18"}]}}}}})
+
+;; Same facts, elements listed in the OPPOSITE order in the source map (Clojure
+;; array-maps preserve literal order for small maps) — proves the fix is NOT
+;; order-dependent.
+(def ^:private edgar-obj-revenue-collision-order-b
+  {"cik" 999998
+   "facts" {"us-gaap" {"SalesRevenueNet"
+                       {"units" {"USD" [{"fp" "FY" "form" "10-K" "fy" 2017
+                                         "end" "2017-08-31" "start" "2016-09-01"
+                                         "val" 126172000000 "accn" "narrow" "filed" "2017-10-18"}]}}
+                       "Revenues"
+                       {"units" {"USD" [{"fp" "FY" "form" "10-K" "fy" 2017
+                                         "end" "2017-08-31" "start" "2016-09-01"
+                                         "val" 129025000000 "accn" "broad" "filed" "2017-10-18"}]}}}}})
+
+;; Case B (name-based override needed): Revenues (SMALLER, correct) vs
+;; RevenueFromContractWithCustomerExcludingAssessedTax (LARGER, but wrong for
+;; total company revenue) — mirrors the real Mastercard FY2019/2020/2021 bug
+;; instance, where a genuine same-duration/fy/fp/form XBRL point under the
+;; "broader-sounding" element is actually a gross/pre-rebate figure, not the
+;; company's real total revenue. A pure "larger wins" rule gets this WRONG
+;; (verified against Mastercard's real reported net revenue); this pair needs
+;; the `element-priority` name override instead.
+(def ^:private edgar-obj-revenue-collision-name-override
+  {"cik" 999997
+   "facts" {"us-gaap" {"RevenueFromContractWithCustomerExcludingAssessedTax"
+                       {"units" {"USD" [{"fp" "FY" "form" "10-K" "fy" 2019
+                                         "end" "2019-12-31" "start" "2019-01-01"
+                                         "val" 24980000000 "accn" "gross" "filed" "2020-02-14"}]}}
+                       "Revenues"
+                       {"units" {"USD" [{"fp" "FY" "form" "10-K" "fy" 2019
+                                         "end" "2019-12-31" "start" "2019-01-01"
+                                         "val" 16883000000 "accn" "net" "filed" "2020-02-14"}]}}}}})
+
+;; Case C (name-based override, instant/balance-sheet facts): StockholdersEquity
+;; (parent-only, LARGER here) vs StockholdersEquityIncludingPortionAttributable-
+;; ToNoncontrollingInterest (consolidated total, SMALLER here because this
+;; synthetic filer has a small negative/deficit noncontrolling interest) —
+;; mirrors real PepsiCo/Qualcomm/Cisco/Boeing instances. ASC 810 requires
+;; consolidated "total equity" to include NCI, so the …IncludingNCI tag is the
+;; definitionally-correct canonical total-equity value even though it is
+;; numerically smaller here; a pure "larger wins" rule would get this wrong.
+(def ^:private edgar-obj-equity-collision-name-override
+  {"cik" 999996
+   "facts" {"us-gaap" {"StockholdersEquity"
+                       {"units" {"USD" [{"fp" "FY" "form" "10-K" "fy" 2016
+                                         "end" "2016-12-31" "val" 63586000000
+                                         "accn" "parent-only" "filed" "2017-02-15"}]}}
+                       "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"
+                       {"units" {"USD" [{"fp" "FY" "form" "10-K" "fy" 2016
+                                         "end" "2016-12-31" "val" 63585000000
+                                         "accn" "consolidated-with-nci-deficit" "filed" "2017-02-15"}]}}}}})
+
+(deftest edgar-element-priority-prefers-broader-revenue-magnitude-order-independent
+  (doseq [obj [edgar-obj-revenue-collision-order-a edgar-obj-revenue-collision-order-b]]
+    (let [[filings facts rejected] (ing/parse-edgar-companyfacts obj "org.corp.us.synthetic-broad-narrow")]
+      (is (= (count filings) 1))
+      (is (= (count facts) 1))
+      (let [f (first facts)]
+        (is (= (get f ":fin.fact/concept") ":revenue"))
+        (is (= (get f ":fin.fact/value") 129025.0))               ; Revenues (broad) survives, NOT SalesRevenueNet
+        (is (= (get f ":fin.fact/concept-raw") "us-gaap:Revenues")))
+      (is (= (count rejected) 1))                                 ; loser is logged, not silently dropped
+      (is (= (get (first rejected) ":rejected-concept-raw") "us-gaap:SalesRevenueNet"))
+      (is (= (get (first rejected) ":rejected-value") 126172.0))
+      (is (= (get (first rejected) ":kept-value") 129025.0)))))
+
+(deftest edgar-element-priority-name-override-beats-larger-gross-revenue-tag
+  (let [[filings facts rejected] (ing/parse-edgar-companyfacts edgar-obj-revenue-collision-name-override "org.corp.us.synthetic-mastercard-like")]
+    (is (= (count filings) 1))
+    (is (= (count facts) 1))
+    (let [f (first facts)]
+      (is (= (get f ":fin.fact/concept") ":revenue"))
+      ;; Revenues (16883, smaller) wins over RevenueFromContract... (24980, larger) --
+      ;; magnitude-only would wrongly pick 24980.
+      (is (= (get f ":fin.fact/value") 16883.0))
+      (is (= (get f ":fin.fact/concept-raw") "us-gaap:Revenues")))
+    (is (= (count rejected) 1))
+    (is (= (get (first rejected) ":rejected-concept-raw") "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax"))
+    (is (= (get (first rejected) ":rejected-value") 24980.0))))
+
+(deftest edgar-element-priority-name-override-total-equity-includes-nci-deficit
+  (let [[filings facts rejected] (ing/parse-edgar-companyfacts edgar-obj-equity-collision-name-override "org.corp.us.synthetic-nci-deficit")]
+    (is (= (count filings) 1))
+    (is (= (count facts) 1))
+    (let [f (first facts)]
+      (is (= (get f ":fin.fact/concept") ":total-equity"))
+      ;; …IncludingNCI (63585, smaller) wins over StockholdersEquity (63586, larger) --
+      ;; magnitude-only would wrongly pick the parent-only 63586.
+      (is (= (get f ":fin.fact/value") 63585.0))
+      (is (= (get f ":fin.fact/concept-raw")
+             "us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest")))
+    (is (= (count rejected) 1))
+    (is (= (get (first rejected) ":rejected-concept-raw") "us-gaap:StockholdersEquity"))
+    (is (= (get (first rejected) ":rejected-value") 63586.0))))
+
+;; Regression fixture: the SAME element repeated across multiple accessions for the
+;; SAME fy (a real, common EDGAR pattern -- e.g. Alphabet's fy:2015 Revenues point
+;; recurs, sometimes with a different value, in every later 10-K's prior-year
+;; comparative column) must NOT go through the new element-priority/magnitude
+;; tie-break -- that pre-existing "same tag, multiple filings" collision keeps the
+;; ORIGINAL last-in-source-order-wins behavior. Verified during this fix: applying
+;; "largest wins" here would have been WRONG in general (a later restated
+;; comparative that reclassifies a divested unit out of continuing operations is
+;; typically SMALLER, not larger, than the original). This fixture's smaller,
+;; LATER-listed point must win over the larger, EARLIER-listed point.
+(def ^:private edgar-obj-same-element-restated-smaller
+  {"cik" 999995
+   "facts" {"us-gaap" {"Revenues"
+                       {"units" {"USD" [{"fp" "FY" "form" "10-K" "fy" 2015
+                                         "start" "2015-01-01" "end" "2015-12-31"
+                                         "val" 74989000000 "accn" "original-2015-10K" "filed" "2016-02-11"}
+                                        {"fp" "FY" "form" "10-K" "fy" 2015
+                                         "start" "2015-01-01" "end" "2015-12-31"
+                                         "val" 66001000000 "accn" "restated-comparative-in-2017-10K" "filed" "2018-02-06"}]}}}}})
+
+(deftest edgar-same-element-multi-accession-keeps-last-wins-not-magnitude
+  (let [[filings facts rejected] (ing/parse-edgar-companyfacts edgar-obj-same-element-restated-smaller "org.corp.us.synthetic-restated")]
+    (is (= (count filings) 1))
+    (is (= (count facts) 1))
+    (let [f (first facts)]
+      (is (= (get f ":fin.fact/concept") ":revenue"))
+      ;; last-in-source-order (66001, the LATER restated comparative) wins, NOT the
+      ;; larger 74989 -- magnitude is not applied within a single element.
+      (is (= (get f ":fin.fact/value") 66001.0)))
+    ;; same-element repeats are not element-priority collisions -- nothing logged.
+    (is (empty? rejected))))
+
 (deftest edinet-maps-jgaap-and-drops-unmapped
   (let [[filings facts] (ing/parse-edinet-elements edinet-obj "org.corp.jp.toyota")]
     (is (= (count filings) 1))
