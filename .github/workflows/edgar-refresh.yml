@@ -1,0 +1,80 @@
+name: EDGAR refresh
+
+# G7-authorised weekly re-fetch + re-parse of every EDGAR-sourced company
+# already in data/facts.merged.kotoba.edn (scripts/refetch_edgar.cljs — no
+# scope expansion, single polite request per company, ~400ms apart, a real
+# identifying User-Agent — see that script's own docstring). SEC 10-K/10-Q
+# filings do not change fast enough to warrant more than weekly, and weekly
+# matches the "never organism-tick scraping" ethos this actor's gates
+# require (manifest.edn G7). This workflow NEVER auto-merges: it only opens
+# a PR for human review when the refresh actually changed the dataset, and
+# a failing test suite fails the workflow instead of opening a bad PR.
+on:
+  schedule:
+    - cron: '0 9 * * 1' # Monday 09:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js (for nbb)
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Install nbb
+        run: npm install -g nbb
+
+      - name: Set up Clojure/babashka (for the test suite — bb test)
+        uses: DeLaGuardo/setup-clojure@13.6.1
+        with:
+          bb: 'latest'
+
+      - name: Re-fetch + re-parse EDGAR companyfacts
+        run: |
+          nbb --classpath src scripts/refetch_edgar.cljs \
+            --summary-path /tmp/edgar-refresh-summary.md
+
+      - name: Run test suite (must stay green — a red run is the correct outcome, not a silently-bad PR)
+        run: bb test
+
+      - name: Check for a data diff
+        id: diff
+        run: |
+          if git diff --quiet -- data/facts.merged.kotoba.edn; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "no diff in data/facts.merged.kotoba.edn — skipping PR (no-op, no noise)"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat -- data/facts.merged.kotoba.edn
+          fi
+
+      - name: Compute run metadata
+        if: steps.diff.outputs.changed == 'true'
+        id: meta
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Open PR (never auto-merged — human review required)
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "ci: weekly EDGAR refresh (${{ steps.meta.outputs.date }})"
+          branch: ci/edgar-refresh-${{ steps.meta.outputs.date }}
+          delete-branch: true
+          title: "ci: weekly EDGAR refresh (${{ steps.meta.outputs.date }})"
+          body-path: /tmp/edgar-refresh-summary.md
+          add-paths: data/facts.merged.kotoba.edn
+          labels: |
+            automated
+            edgar-refresh
