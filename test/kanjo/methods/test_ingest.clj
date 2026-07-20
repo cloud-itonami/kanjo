@@ -19,6 +19,25 @@
                                         {"fp" "Q3" "form" "10-Q" "fy" 2024 "end" "2024-06-29" "val" 1}]}}
                        "UnknownTag" {"units" {"USD" [{"fp" "FY" "form" "10-K" "fy" 2024 "val" 9}]}}}}})
 
+;; Adversarial fixture (2026-07-20 duration-guard fix): a synthetic filer whose
+;; us-gaap:Revenues element carries TWO points for the SAME fy/fp:"FY"/form:"10-K" —
+;; a true full-year point (start/end ~365 days apart) and a SPURIOUS quarterly point
+;; (start/end ~92 days apart, same "end" as the annual point) mislabeled with the same
+;; filing-level fp/form/fy metadata. This mirrors the real "selected quarterly
+;; financial data" Q4 footnote pattern that silently corrupted Apple/Microsoft/Texas
+;; Instruments FY2020, Costco FY2017, Nvidia FY2016-17, and P&G FY2020 revenue prior
+;; to this fix (dedup-latest's "last wins" arbitrarily picked whichever point the raw
+;; JSON iterated last).
+(def ^:private edgar-obj-mixed-duration
+  {"cik" 999999
+   "facts" {"us-gaap" {"Revenues"
+                       {"units" {"USD" [{"fp" "FY" "form" "10-K" "fy" 2020
+                                         "start" "2020-01-01" "end" "2020-12-31"
+                                         "val" 100000000000 "accn" "annual" "filed" "2021-02-01"}
+                                        {"fp" "FY" "form" "10-K" "fy" 2020
+                                         "start" "2020-10-01" "end" "2020-12-31"
+                                         "val" 30000000000 "accn" "q4-footnote" "filed" "2021-02-01"}]}}}}})
+
 (def ^:private edinet-obj
   {"company" "org.corp.jp.toyota" "accounting" "jgaap" "fiscalYear" 2024 "currency" "jpy"
    "periodEnd" "2024-03-31"
@@ -35,6 +54,16 @@
       (is (= (get f ":fin.fact/concept") ":revenue"))
       (is (= (get f ":fin.fact/value") 391035.0))    ; base → millions
       (is (= (get f ":fin.fact/unit") ":usd"))
+      (is (= (get f ":fin.fact/sourcing") ":authoritative")))))
+
+(deftest edgar-duration-guard-rejects-quarterly-mislabeled-as-annual
+  (let [[filings facts] (ing/parse-edgar-companyfacts edgar-obj-mixed-duration "org.corp.us.synthetic")]
+    (is (= (count filings) 1))
+    ;; only the TRUE annual point survives; the same-fy/fp/form quarterly point is rejected
+    (is (= (count facts) 1))
+    (let [f (first facts)]
+      (is (= (get f ":fin.fact/concept") ":revenue"))
+      (is (= (get f ":fin.fact/value") 100000.0))    ; annual value (base → millions), NOT the 30000.0 Q4 figure
       (is (= (get f ":fin.fact/sourcing") ":authoritative")))))
 
 (deftest edinet-maps-jgaap-and-drops-unmapped

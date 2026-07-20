@@ -61,18 +61,23 @@
 
 (defn- rd-str [{:keys [s n i] :as r}]
   (vswap! i inc) ;; consume opening quote
-  (let [sb (StringBuilder.)]
+  ;; Portable mutable buffer: real StringBuilder on :clj (unchanged behavior), a JS
+  ;; array + join on :cljs/nbb — java.lang.StringBuilder has no cljs analogue, and
+  ;; this reader is used from nbb (scripts/refetch_edgar.cljs), not just the JVM.
+  (let [sb #?(:clj (StringBuilder.) :cljs (array))
+        append! (fn [ch] #?(:clj (.append ^StringBuilder sb ch) :cljs (.push sb ch)))
+        finish! (fn [] #?(:clj (.toString ^StringBuilder sb) :cljs (.join sb "")))]
     (loop []
       (if (< @i n)
         (let [c (.charAt ^String s @i)]
           (cond
             (= c \\) (let [nxt (if (< (inc @i) n) (.charAt ^String s (inc @i)) \space)]
                        (vswap! i inc)
-                       (.append sb (case nxt \n \newline \t \tab \r \return nxt))
+                       (append! (case nxt \n \newline \t \tab \r \return nxt))
                        (vswap! i inc)
                        (recur))
-            (= c \") (do (vswap! i inc) (.toString sb))
-            :else (do (.append sb c) (vswap! i inc) (recur))))
+            (= c \") (do (vswap! i inc) (finish!))
+            :else (do (append! c) (vswap! i inc) (recur))))
         (throw (ex-info "unterminated string" {}))))))
 
 (def ^:private delim #{\space \tab \return \newline \, \[ \] \{ \} \"})
