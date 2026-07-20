@@ -40,6 +40,62 @@
 
 (defn- get* [m k d] (if (contains? m k) (get m k) d))
 
+;; ── duration guard (annual vs quarterly-mislabeled-as-annual) ───────────────
+;; SEC EDGAR's companyfacts feed can carry a QUARTERLY-duration data point (e.g. a
+;; "selected quarterly financial data" Q4 footnote figure embedded IN the 10-K) tagged
+;; with the SAME fy / fp:"FY" / form:"10-K" metadata as the true full-year figure —
+;; those three fields describe the SOURCE FILING, not the duration of any one data
+;; point within it. Without checking the point's own [start,end] window, such a
+;; quarterly-scale point passes the fp/form/fy filter unnoticed and can silently
+;; clobber the true annual value under dedup-latest's "last wins". Confirmed real
+;; instances: Apple/Microsoft/Texas Instruments FY2020, Costco FY2017, Nvidia
+;; FY2016-17, P&G FY2020 revenue all stored as Q4-scale figures pre-fix.
+(def MIN-ANNUAL-DURATION-DAYS
+  "Shortest [start,end] span (inclusive, days) accepted as a full fiscal year. A true
+  annual duration is ~365 days; 350 gives slack for short fiscal years / leap-year
+  edges without admitting a ~90-day quarterly point."
+  350)
+
+(def MAX-ANNUAL-DURATION-DAYS
+  "Longest [start,end] span (inclusive, days) accepted as a full fiscal year. 380 gives
+  slack for a 53-week fiscal year (common in retail, e.g. Costco) without admitting a
+  ~2-year cumulative duration point."
+  380)
+
+(defn- parse-int [s] #?(:clj (Long/parseLong s) :cljs (js/parseInt s 10)))
+
+(defn- ymd->epoch-day
+  "Days since a fixed epoch for an ISO \"YYYY-MM-DD\" date string. Portable
+  civil-to-days conversion (Howard Hinnant's days_from_civil, proleptic Gregorian) —
+  no java.time / js Date dependency needed to keep this .cljc usable from clj, cljs,
+  and nbb alike."
+  [s]
+  (let [[y m d] (map parse-int (str/split s #"-"))
+        y (if (<= m 2) (dec y) y)
+        era (quot (if (>= y 0) y (- y 399)) 400)
+        yoe (- y (* era 400))
+        doy (+ (quot (+ (* 153 (+ m (if (> m 2) -3 9))) 2) 5) d -1)
+        doe (+ (* yoe 365) (quot yoe 4) (- (quot yoe 100)) doy)]
+    (+ (* era 146097) doe -719468)))
+
+(defn- duration-days [start end] (- (ymd->epoch-day end) (ymd->epoch-day start)))
+
+(defn- annual-duration?
+  "True if XBRL point `p` is either (a) an INSTANT fact with no \"start\" key at all
+  (e.g. total-assets — unaffected by this check, exactly as before this guard existed),
+  or (b) a DURATION/flow fact whose [start,end] window falls within
+  [MIN-ANNUAL-DURATION-DAYS, MAX-ANNUAL-DURATION-DAYS] — i.e. actually spans a full
+  fiscal year rather than a quarter mislabeled with filing-level fp:\"FY\"/form:\"10-K\"
+  metadata. Never throws — a malformed/unparseable start or end on one point is
+  rejected (skipped), not allowed to crash the whole ingest."
+  [p]
+  (if-not (contains? p "start")
+    true
+    (try
+      (let [days (duration-days (get p "start") (get p "end"))]
+        (<= MIN-ANNUAL-DURATION-DAYS days MAX-ANNUAL-DURATION-DAYS))
+      (catch #?(:clj Exception :cljs :default) _ false))))
+
 ;; ── parsers ─────────────────────────────────────────────────────────────────
 
 (defn- dedup-latest
@@ -52,7 +108,13 @@
 (defn parse-edgar-companyfacts
   "SEC EDGAR companyfacts → [filings facts] (:authoritative).
   obj shape: obj['facts']['us-gaap'][Element]['units'][unit][ {end val fy fp form ...} ].
-  Picks annual (fp == 'FY', form 10-K/20-F); one fact per (concept, fy)."
+  Picks annual (fp == 'FY', form 10-K/20-F) AND, for duration/flow points (those
+  carrying a \"start\" key), verifies [start,end] actually spans ~1 year
+  (annual-duration?/MIN-ANNUAL-DURATION-DAYS..MAX-ANNUAL-DURATION-DAYS) — fp/form/fy
+  describe the SOURCE FILING, not any one data point's own duration, so a quarterly
+  footnote point embedded in the 10-K can otherwise pass this filter mislabeled as
+  annual. Instant points (no \"start\", e.g. total-assets) are unaffected. One fact per
+  (concept, fy)."
   ([obj org-id] (parse-edgar-companyfacts obj org-id nil))
   ([obj org-id want-fy]
    (let [gaap (get-in obj ["facts" "us-gaap"] {})
@@ -67,7 +129,8 @@
                    (reduce
                     (fn [[filings facts] p]
                       (if (or (not= (get p "fp") "FY")
-                              (not (#{"10-K" "20-F"} (get p "form"))))
+                              (not (#{"10-K" "20-F"} (get p "form")))
+                              (not (annual-duration? p)))
                         [filings facts]
                         (let [fy (get p "fy")]
                           (if (and want-fy (not= fy want-fy))
