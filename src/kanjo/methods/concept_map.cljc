@@ -12,7 +12,7 @@
   Canonical concept names are plain strings (no leading colon), as in the Python
   port — `canonical` returns the bare name or nil; `:fin.concept/*` attrs add the
   colon at emit time. Convention parity: all `:*` attr/value tokens stay strings."
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             #?(:clj [clojure.java.io :as io])))
 
 ;; ── canonical concept catalogue ──────────────────────────────────────────────

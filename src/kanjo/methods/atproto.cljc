@@ -19,7 +19,7 @@
   deterministic — `createdAt` is passed IN (no clock in the pure path), and the
   record key is a CONTENT hash of the record, so the same fact always yields the
   same rkey (resume-safe, like autorun). File I/O sits at the JVM edge."
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             [kanjo.methods.kanjo-edn :as kanjo-edn]
             #?(:clj [clojure.java.io :as io])))
 
@@ -163,8 +163,8 @@
   (let [company (name-of (get fact ":fin.fact/company"))
         fy (get filing ":fin.filing/fiscal-year")
         concept (str/replace (str/replace-first (get fact ":fin.fact/concept") #"^:" "") "-" " ")
-        std (str/upper-case (str/replace-first (str (get filing ":fin.filing/accounting")) #"^:" ""))
-        src (str/upper-case (str/replace-first (str (get filing ":fin.filing/source")) #"^:" ""))
+        std (str/upper (str/replace-first (str (get filing ":fin.filing/accounting")) #"^:" ""))
+        src (str/upper (str/replace-first (str (get filing ":fin.filing/source")) #"^:" ""))
         ctx (str/replace-first (str (get fact ":fin.fact/context")) #"^:" "")]
     (assert-clean
      (str company " disclosed FY" fy " " concept " " (fmt-value fact)

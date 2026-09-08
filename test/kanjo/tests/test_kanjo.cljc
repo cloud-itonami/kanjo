@@ -5,7 +5,7 @@
   the ingest primary-disclosure parsers, and the minimal EDN reader round-trip — 1:1
   with the Python assertions (the seed graph drives the same arithmetic)."
   (:require [clojure.java.io :as io]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             [clojure.test :refer [deftest is]]
             [kanjo.methods.kanjo-edn :as kanjo-edn]
             [kanjo.methods.concept-map :as cmap]

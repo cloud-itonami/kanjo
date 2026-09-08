@@ -16,7 +16,7 @@
   Convention parity (root CLAUDE.md / bond.cljc): graph rows are maps with STRING
   `\":fin.…/…\"` keys; keyword values stay `\":foo\"` strings. Pure transforms; file
   I/O sits at the JVM edge (kanjo-edn/read-file + spit)."
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             [kanjo.methods.kanjo-edn :as kanjo-edn]
             [kanjo.methods.concept-map :as cmap]
             #?(:clj [clojure.java.io :as io])))
@@ -193,7 +193,7 @@
 (defn fmt-money
   ([v unit] (fmt-money v unit ":millions"))
   ([v unit scale]
-   (let [sym (get ccy-sym unit (str (str/upper-case (str/replace-first unit #"^:+" "")) " "))]
+   (let [sym (get ccy-sym unit (str (str/upper (str/replace-first unit #"^:+" "")) " "))]
      (if (= scale ":millions")
        (cond
          (>= (Math/abs (double v)) 1000000) (str sym (fmt-float "%.2f" (/ v 1000000.0)) "tn")
@@ -282,7 +282,7 @@
     (doseq [a aggs]
       (let [unit (str ":" (nth (str/split (get a ":fin.agg/id") #"\.") (- (count (str/split (get a ":fin.agg/id") #"\.")) 3)))]
         (A (str "| " (get a ":fin.agg/key") " | "
-                (str/upper-case (str/replace-first unit #"^:+" "")) " | "
+                (str/upper (str/replace-first unit #"^:+" "")) " | "
                 (get a ":fin.agg/fiscal-year") " | "
                 (fmt-money (get a ":fin.agg/sum") unit) " | " (get a ":fin.agg/n") " |"))))
     (A "")

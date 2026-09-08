@@ -12,7 +12,7 @@
   values that are keywords stay `\":foo\"` strings. Pure transforms; the live
   EDGAR fetch is G7-gated and requires an explicitly injected host capability;
   file/network I/O stays outside this portable namespace."
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             [kanjo.methods.concept-map :as cmap]))
 
 ;; CIK → org.corp.* id (shared kabuto/tsumugi space)
@@ -323,7 +323,7 @@
                                                     ":fin.filing/filed-date" (get* p "filed" "")
                                                     ":fin.filing/accession" accession
                                                     ":fin.filing/doc-cid" ""
-                                                    ":fin.filing/currency" (str ":" (str/lower-case unit))
+                                                    ":fin.filing/currency" (str ":" (str/lower unit))
                                                     ":fin.filing/accounting" ":usgaap"
                                                     ":fin.filing/sourcing" ":authoritative"}))
                                   stmt (get* concept-stmt canon ":pl")
@@ -332,7 +332,7 @@
                                         ":fin.fact/statement" stmt ":fin.fact/concept" (str ":" canon)
                                         ":fin.fact/concept-raw" (str "us-gaap:" element)
                                         ":fin.fact/value" (/ (double (get p "val")) 1000000.0)
-                                        ":fin.fact/unit" (str ":" (str/lower-case unit))
+                                        ":fin.fact/unit" (str ":" (str/lower unit))
                                         ":fin.fact/scale" ":millions"
                                         ":fin.fact/context" ":consolidated" ":fin.fact/period-end" end
                                         ":fin.fact/sourcing" ":authoritative"}]
