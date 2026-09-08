@@ -13,7 +13,7 @@
   the Python shape. Maps→map, vectors→vector, nil/true/false as-is.
 
   I/O is at the edges (clojure.java.io); the parser itself is pure."
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             #?(:clj [clojure.java.io :as io])))
 
 ;; ── reader state is a tiny mutable cursor over the string (volatile index) ──

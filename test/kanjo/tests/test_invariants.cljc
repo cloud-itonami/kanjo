@@ -6,7 +6,7 @@
   number is a transparent ratio flagged :synthesized; live fetch is G7-gated; metric
   kinds match their declared inputs. ADR-2606032000."
   (:require [clojure.java.io :as io]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             [clojure.test :refer [deftest is]]
             [kanjo.methods.analyze :as analyze]
             [kanjo.methods.concept-map :as cmap]
@@ -25,7 +25,7 @@
 
 (deftest report-is-non-adjudicating-no-advice
   (let [[md _m _a] (gen-report)
-        low (str/lower-case md)]
+        low (str/lower md)]
     (is (str/includes? low "non-adjudicating"))
     (is (str/includes? low "no investment advice"))))
 
@@ -33,10 +33,10 @@
   ;; G4: the report must EXPLICITLY state it does not forecast/rate/recommend, and must
   ;; not emit an actual verdict artifact (a price target or a buy/sell call).
   (let [[md _m _a] (gen-report)
-        low (str/lower-case md)]
+        low (str/lower md)]
     (is (str/includes? low "does not forecast"))
     (doseq [verdict ["目標株価" "格付け" "投資判断:" "recommendation:"]]
-      (is (not (str/includes? low (str/lower-case verdict)))
+      (is (not (str/includes? low (str/lower verdict)))
           (str "adjudication artifact leaked: " (pr-str verdict))))))
 
 (deftest derived-metrics-are-synthesized-not-authoritative
@@ -67,7 +67,7 @@
                (catch clojure.lang.ExceptionInfo e e))]
     (is (some? e) "live EDGAR fetch must refuse without KANJO_OPERATOR_GATE=1")
     (when e
-      (let [msg (str/lower-case (ex-message e))]
+      (let [msg (str/lower (ex-message e))]
         (is (or (str/includes? (ex-message e) "G7")
                 (str/includes? msg "refus")
                 (str/includes? msg "gate")))))))

@@ -2,7 +2,7 @@
   "kanjō 勘定 — depgraph cell tests (ADR-0003). The supply-graph join, the dependency
   metrics (依存関係), the readable-core subgraph, and the dependency-record shape."
   (:require [clojure.java.io :as io]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             [clojure.test :refer [deftest is]]
             [kanjo.methods.kanjo-edn :as kanjo-edn]
             [kanjo.methods.depgraph :as dg]))

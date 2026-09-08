@@ -13,7 +13,7 @@
       and NO rating/recommendation/target/forecast attr;
     - it does NO external I/O (offline ingest, local persist — G7 stays gated)."
   (:require [clojure.test :refer [deftest is run-tests]]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             #?(:clj [clojure.java.io :as io])
             [kanjo.methods.autorun :as autorun]
             [kanjo.methods.kotoba :as kotoba]))

@@ -22,7 +22,7 @@
   `'b' + hashlib.sha256(json.dumps({'prev':…,'datoms':…}, ensure_ascii=False, sort_keys=True,
   separators=(',',':')).encode('utf-8')).hexdigest()` byte-for-byte.
   (The Python `__main__` heartbeat printer is omitted — it is the autorun.cljc -main concern.)"
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             [kanjo.methods.kanjo-edn :as kanjo-edn]))
 
 ;; ── sha-256 host seam ─────────────────────────────────────────────────────────

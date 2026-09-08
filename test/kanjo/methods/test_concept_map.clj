@@ -6,7 +6,7 @@
   Run:  bb --classpath 20-actors methods/test_concept_map.clj"
   (:require [kanjo.methods.concept-map :as cm]
             [kanjo.methods.analyze :as a]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             [clojure.test :refer [deftest is run-tests]]))
 
 (deftest cross-gaap-revenue-normalizes-to-one-concept

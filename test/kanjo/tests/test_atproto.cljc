@@ -2,7 +2,7 @@
   "kanjō 勘定 — atproto cell tests. The constitutional guard (G2/G4), the
   content-addressed record key (resume-safe determinism), and record shape."
   (:require [clojure.java.io :as io]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             [clojure.test :refer [deftest is]]
             [kanjo.methods.kanjo-edn :as kanjo-edn]
             [kanjo.methods.atproto :as at]))

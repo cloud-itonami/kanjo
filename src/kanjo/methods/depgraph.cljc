@@ -20,7 +20,7 @@
   transforms; file I/O at the JVM edge.
 
   Convention parity (analyze.cljc / kanjo-edn): graph rows are maps with STRING keys."
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             [kanjo.methods.kanjo-edn :as kanjo-edn]
             #?(:clj [clojure.java.io :as io])))
 
