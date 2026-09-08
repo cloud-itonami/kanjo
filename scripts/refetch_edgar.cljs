@@ -61,7 +61,7 @@
                   correctly skip opening a PR)."
   (:require [kanjo.methods.ingest :as ing]
             [kanjo.methods.kanjo-edn :as kedn]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             [promesa.core :as p]
             ["fs" :as fs]))
 
@@ -91,7 +91,7 @@
 
 (defn- org-id->ticker [org-id]
   (let [suffix (org-suffix org-id)]
-    (str/upper-case (get org-suffix->ticker-override suffix suffix))))
+    (str/upper (get org-suffix->ticker-override suffix suffix))))
 
 ;; Explicit CIK overrides for cases where SEC's company_tickers.json ticker→CIK
 ;; entry does NOT point at the primary annual-report (10-K) filer — verified by hand
