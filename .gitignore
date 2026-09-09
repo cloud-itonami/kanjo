@@ -6,3 +6,6 @@ data/ingest/
 # scripts/refetch_edgar.cljs writes a same-run backup of the prior data file
 # content before overwriting it — a local safety net, not a tracked artifact.
 data/*.bak
+
+# nbb dependency cache -- a build artifact, not source
+.nbb/
