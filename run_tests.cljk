@@ -1,7 +1,7 @@
 #!/usr/bin/env bb
 ;; kanjo 勘定 — bb-native test runner (Clojure / babashka; no shell). ADR-2606072802.
 ;; Per the repo-wide rule (root CLAUDE.md §"Operational code = clj/bb"): first-party
-;; tooling is clj/bb, NOT shell. New actors ship run_tests.clj, not run_tests.sh; this
+;; tooling is clj/bb, NOT shell. New actors ship run_tests.cljk, not run_tests.sh; this
 ;; replaces the former run_tests.sh (ADR-2606160842 py->clj port wave).
 ;;
 ;;   bb test      ; run from the standalone repository root
@@ -24,7 +24,7 @@
          '[babashka.fs :as fs]
          '[clojure.test :as t])
 
-;; this file is run_tests.clj → classpath root is its grandparent (20-actors/)
+;; this file is run_tests.cljk → classpath root is its grandparent (20-actors/)
 (cp/add-classpath (str (fs/path (fs/parent (fs/absolutize *file*)) "src")))
 (cp/add-classpath (str (fs/path (fs/parent (fs/absolutize *file*)) "test")))
 

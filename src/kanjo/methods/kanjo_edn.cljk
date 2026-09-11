@@ -63,7 +63,7 @@
   (vswap! i inc) ;; consume opening quote
   ;; Portable mutable buffer: real StringBuilder on :clj (unchanged behavior), a JS
   ;; array + join on :cljs/nbb — java.lang.StringBuilder has no cljs analogue, and
-  ;; this reader is used from nbb (scripts/refetch_edgar.cljs), not just the JVM.
+  ;; this reader is used from nbb (scripts/refetch_edgar.cljk), not just the JVM.
   (let [sb #?(:clj (StringBuilder.) :cljs (array))
         append! (fn [ch] #?(:clj (.append ^StringBuilder sb ch) :cljs (.push sb ch)))
         finish! (fn [] #?(:clj (.toString ^StringBuilder sb) :cljs (.join sb "")))]
