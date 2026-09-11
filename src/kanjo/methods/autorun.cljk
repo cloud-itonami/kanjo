@@ -78,7 +78,7 @@
             ;; read the (potentially large, content-addressed) log ONCE and reuse it — head-cid/
             ;; verify-chain used to each re-read+re-parse the whole file a SECOND/THIRD time
             ;; (measured: 3x re-parse of a 13.8MB single-tx kanjo log cost ~79s of a ~130s cycle,
-            ;; the single largest cost in the heartbeat; see run_tests.clj's SLOW note).
+            ;; the single largest cost in the heartbeat; see run_tests.cljk's SLOW note).
             txs (kotoba/read-log log-path)]
         {"cycles" cycles
          "beats" beats

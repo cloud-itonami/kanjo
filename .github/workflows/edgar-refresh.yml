@@ -1,7 +1,7 @@
 name: EDGAR refresh
 
 # G7-authorised weekly re-fetch + re-parse of every EDGAR-sourced company
-# already in data/facts.merged.kotoba.edn (scripts/refetch_edgar.cljs — no
+# already in data/facts.merged.kotoba.edn (scripts/refetch_edgar.cljk — no
 # scope expansion, single polite request per company, ~400ms apart, a real
 # identifying User-Agent — see that script's own docstring). SEC 10-K/10-Q
 # filings do not change fast enough to warrant more than weekly, and weekly
@@ -42,7 +42,7 @@ jobs:
 
       - name: Re-fetch + re-parse EDGAR companyfacts
         run: |
-          nbb --classpath src scripts/refetch_edgar.cljs \
+          nbb --classpath src scripts/refetch_edgar.cljk \
             --summary-path /tmp/edgar-refresh-summary.md
 
       - name: Run test suite (must stay green — a red run is the correct outcome, not a silently-bad PR)

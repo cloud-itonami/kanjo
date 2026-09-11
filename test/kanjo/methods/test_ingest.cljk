@@ -67,7 +67,7 @@
       (is (= (get f ":fin.fact/sourcing") ":authoritative")))))
 
 ;; Adversarial fixtures (2026-07-20 element-priority follow-up fix, same-family as
-;; the duration-guard fix above — see src/kanjo/methods/ingest.cljc
+;; the duration-guard fix above — see src/kanjo/methods/ingest.cljk
 ;; `element-priority` / the evidence trail above it). Both elements below are
 ;; genuinely annual (~365-day, or instant) points with the SAME fy/fp:"FY"/
 ;; form:"10-K" — the duration guard does NOT reject either one. The bug this
