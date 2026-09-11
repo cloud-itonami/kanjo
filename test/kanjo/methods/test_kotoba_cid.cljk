@@ -1,4 +1,4 @@
-#!/usr/bin/env bb
+#!/usr/bin/env kbb
 ;; Cross-process CID-determinism guard for the kanjo kotoba commit-DAG.
 (ns kanjo.methods.test-kotoba-cid
   "test_kotoba_cid.clj — kanjo content-addressing reproducibility (ADR-2605312345 / 2606032000).
@@ -9,7 +9,7 @@
   vector (a sibling may edit the seed). G2/G4 non-adjudicating: the fixed vector carries only a
   disclosed filing + a derived (:fin.metric/synthesized) metric, no advice/forecast.
 
-  Run:  bb --classpath 20-actors methods/test_kotoba_cid.clj"
+  Run:  kbb --classpath 20-actors methods/test_kotoba_cid.clj"
   (:require [kanjo.methods.kotoba :as k]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is run-tests]]))
