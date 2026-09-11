@@ -1,9 +1,9 @@
-#!/usr/bin/env bb
+#!/usr/bin/env kbb
 ;; Working Clojure port of the concept_map portion of tests/test_kanjo.py.
 (ns kanjo.methods.test-concept-map
   "kanjō 勘定 — concept_map GAAP-normalization tests (methods/concept_map.clj).
 
-  Run:  bb --classpath 20-actors methods/test_concept_map.clj"
+  Run:  kbb --classpath 20-actors methods/test_concept_map.clj"
   (:require [kanjo.methods.concept-map :as cm]
             [kanjo.methods.analyze :as a]
             [kotoba.lang.text :as str]

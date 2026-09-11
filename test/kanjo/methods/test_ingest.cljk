@@ -1,4 +1,4 @@
-#!/usr/bin/env bb
+#!/usr/bin/env kbb
 ;; Working Clojure test for methods/ingest.clj (no Python test existed; new coverage).
 (ns kanjo.methods.test-ingest
   "Tests for the kanjō 勘定 PRIMARY-disclosure ingest bridge (methods/ingest.clj).
@@ -7,7 +7,7 @@
   the seed-merge precedence (authoritative wins over :representative), and G1 (only mapped
   canonical concepts are admitted).
 
-  Run:  bb --classpath 20-actors methods/test_ingest.clj"
+  Run:  kbb --classpath 20-actors methods/test_ingest.clj"
   (:require [kanjo.methods.ingest :as ing]
             [clojure.test :refer [deftest is run-tests]]))
 

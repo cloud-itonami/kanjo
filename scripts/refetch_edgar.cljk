@@ -1,4 +1,4 @@
-#!/usr/bin/env nbb
+#!/usr/bin/env kbb
 (ns refetch-edgar
   "kanjō 勘定 — G7-authorised live SEC EDGAR re-fetch + re-parse of every EDGAR-sourced
   company already in data/facts.merged.kotoba.edn, using the FIXED
@@ -44,7 +44,7 @@
   cannot be confidently resolved is logged and SKIPPED, never fabricated.
 
   Usage:
-    nbb --classpath src scripts/refetch_edgar.cljk [--dry-run] [--data PATH] [--summary-path PATH]
+    kbb --backend sci --classpath src scripts/refetch_edgar.cljk [--dry-run] [--data PATH] [--summary-path PATH]
 
   --dry-run       resolve + print the CIK table only; no network fetch, no file write.
   --data PATH     override data/facts.merged.kotoba.edn (mainly for tests).

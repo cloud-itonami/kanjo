@@ -1,4 +1,4 @@
-#!/usr/bin/env bb
+#!/usr/bin/env kbb
 ;; kanjō self-publish — thin wrapper delegating to the SHARED kototama organism runtime
 ;; (kototama/lib/actor/publish.bb). Actor config is actor.edn. Run: bb methods/publish.bb [--live]
 (require '[babashka.process :refer [shell]])
