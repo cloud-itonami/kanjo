@@ -13,8 +13,8 @@
 
   Run:  kbb --classpath 20-actors methods/test_pipeline_cid.clj"
   (:require [kanjo.methods.autorun :as autorun]
-            [clojure.java.io :as io]
-            [clojure.java.shell :refer [sh]]
+            [kotoba.io :as io]
+            [kotoba.process :refer [sh]]
             [kotoba.lang.text :as str]
             [kotoba.test :refer [deftest is run-tests]]))
 
