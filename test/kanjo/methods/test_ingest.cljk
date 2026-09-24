@@ -9,7 +9,7 @@
 
   Run:  kbb --classpath 20-actors methods/test_ingest.clj"
   (:require [kanjo.methods.ingest :as ing]
-            [clojure.test :refer [deftest is run-tests]]))
+            [kotoba.test :refer [deftest is run-tests]]))
 
 (def ^:private edgar-obj
   {"cik" 320193

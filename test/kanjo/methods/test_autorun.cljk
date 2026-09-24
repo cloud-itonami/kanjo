@@ -12,7 +12,7 @@
     - G2/G4 non-adjudicating / no-advice / no-forecast: the log carries disclosed facts + ratios
       and NO rating/recommendation/target/forecast attr;
     - it does NO external I/O (offline ingest, local persist — G7 stays gated)."
-  (:require [clojure.test :refer [deftest is run-tests]]
+  (:require [kotoba.test :refer [deftest is run-tests]]
             [kotoba.lang.text :as str]
             #?(:clj [clojure.java.io :as io])
             [kanjo.methods.autorun :as autorun]

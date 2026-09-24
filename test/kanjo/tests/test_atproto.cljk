@@ -3,7 +3,7 @@
   content-addressed record key (resume-safe determinism), and record shape."
   (:require [kotoba.io :as io]
             [kotoba.lang.text :as str]
-            [clojure.test :refer [deftest is]]
+            [kotoba.test :refer [deftest is]]
             [kanjo.methods.kanjo-edn :as kanjo-edn]
             [kanjo.methods.atproto :as at]))
 

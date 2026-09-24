@@ -12,7 +12,7 @@
   Run:  kbb --classpath 20-actors methods/test_kotoba_cid.clj"
   (:require [kanjo.methods.kotoba :as k]
             [clojure.java.io :as io]
-            [clojure.test :refer [deftest is run-tests]]))
+            [kotoba.test :refer [deftest is run-tests]]))
 
 ;; String-keyed EAVT (this actor's house convention — [":db/add" e ":attr" v],
 ;; mirroring what `add`/graph-datoms actually emit; NOT Clojure keywords).

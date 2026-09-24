@@ -6,7 +6,7 @@
   with the Python assertions (the seed graph drives the same arithmetic)."
   (:require [kotoba.io :as io]
             [kotoba.lang.text :as str]
-            [clojure.test :refer [deftest is]]
+            [kotoba.test :refer [deftest is]]
             [kanjo.methods.kanjo-edn :as kanjo-edn]
             [kanjo.methods.concept-map :as cmap]
             [kanjo.methods.analyze :as analyze]
