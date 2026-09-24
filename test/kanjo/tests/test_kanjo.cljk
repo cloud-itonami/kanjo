@@ -4,7 +4,7 @@
   Covers concept-map GAAP normalization, analyze derived ratios + YoY + aggregates,
   the ingest primary-disclosure parsers, and the minimal EDN reader round-trip — 1:1
   with the Python assertions (the seed graph drives the same arithmetic)."
-  (:require [clojure.java.io :as io]
+  (:require [kotoba.io :as io]
             [kotoba.lang.text :as str]
             [clojure.test :refer [deftest is]]
             [kanjo.methods.kanjo-edn :as kanjo-edn]
@@ -13,8 +13,8 @@
             [kanjo.methods.ingest :as ingest]))
 
 (def seed
-  (-> (io/file *file*) .getParentFile .getParentFile .getParentFile .getParentFile
-      (io/file "data" "seed-financial-facts.kotoba.edn") .getAbsolutePath))
+  (-> (io/file *file*) io/parent-file io/parent-file io/parent-file io/parent-file
+      (io/file "data" "seed-financial-facts.kotoba.edn") io/absolute-path))
 
 ;; ── concept-map: GAAP normalization ──────────────────────────────────────────
 
