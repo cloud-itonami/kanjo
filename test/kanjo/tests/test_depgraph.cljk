@@ -1,7 +1,7 @@
 (ns kanjo.tests.test-depgraph
   "kanjō 勘定 — depgraph cell tests (ADR-0003). The supply-graph join, the dependency
   metrics (依存関係), the readable-core subgraph, and the dependency-record shape."
-  (:require [clojure.java.io :as io]
+  (:require [kotoba.io :as io]
             [kotoba.lang.text :as str]
             [clojure.test :refer [deftest is]]
             [kanjo.methods.kanjo-edn :as kanjo-edn]
@@ -22,8 +22,8 @@
 (def rev {"org.corp.us.apple" {:revenue 391035.0 :unit ":usd" :fy 2024}})
 
 (def chokepoint-seed
-  (-> (io/file *file*) .getParentFile .getParentFile .getParentFile .getParentFile
-      (io/file "data" "seed-supply-chokepoints.kotoba.edn") .getAbsolutePath))
+  (-> (io/file *file*) io/parent-file io/parent-file io/parent-file io/parent-file
+      (io/file "data" "seed-supply-chokepoints.kotoba.edn") io/absolute-path))
 
 (deftest out-criticality-finds-chokepoints
   (let [m (dg/node-metrics edges)]
