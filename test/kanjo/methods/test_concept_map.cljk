@@ -7,7 +7,7 @@
   (:require [kanjo.methods.concept-map :as cm]
             [kanjo.methods.analyze :as a]
             [kotoba.lang.text :as str]
-            [clojure.test :refer [deftest is run-tests]]))
+            [kotoba.test :refer [deftest is run-tests]]))
 
 (deftest cross-gaap-revenue-normalizes-to-one-concept
   ;; JP-GAAP, US-GAAP and IFRS revenue elements all land on "revenue"

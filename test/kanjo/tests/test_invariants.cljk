@@ -7,7 +7,7 @@
   kinds match their declared inputs. ADR-2606032000."
   (:require [kotoba.io :as io]
             [kotoba.lang.text :as str]
-            [clojure.test :refer [deftest is]]
+            [kotoba.test :refer [deftest is]]
             [kanjo.methods.analyze :as analyze]
             [kanjo.methods.concept-map :as cmap]
             [kanjo.methods.ingest :as ingest]))

@@ -1,5 +1,5 @@
 (ns kanjo.repository-contract-test
-  (:require [clojure.edn :as edn] [clojure.test :refer [deftest is]]))
+  (:require [clojure.edn :as edn] [kotoba.test :refer [deftest is]]))
 (deftest canonical-edn
   (doseq [p ["manifest.edn" "schema.edn" "actor.edn" "identity.edn"
              "dependencies.edn" "repository-contracts.edn" "migration.edn"]]
