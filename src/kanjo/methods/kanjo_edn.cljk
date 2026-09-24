@@ -14,7 +14,7 @@
 
   I/O is at the edges (clojure.java.io); the parser itself is pure."
   (:require [kotoba.lang.text :as str]
-            #?(:clj [clojure.java.io :as io])))
+            #?(:clj [kotoba.io :as io])))
 
 ;; ── reader state is a tiny mutable cursor over the string (volatile index) ──
 

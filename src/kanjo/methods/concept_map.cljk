@@ -13,7 +13,7 @@
   port — `canonical` returns the bare name or nil; `:fin.concept/*` attrs add the
   colon at emit time. Convention parity: all `:*` attr/value tokens stay strings."
   (:require [kotoba.lang.text :as str]
-            #?(:clj [clojure.java.io :as io])))
+            #?(:clj [kotoba.io :as io])))
 
 ;; ── canonical concept catalogue ──────────────────────────────────────────────
 ;; Each entry: [canonical-name [statement label jgaap usgaap ifrs note]] — ORDERED
