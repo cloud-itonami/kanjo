@@ -19,9 +19,9 @@
   deterministic — `createdAt` is passed IN (no clock in the pure path), and the
   record key is a CONTENT hash of the record, so the same fact always yields the
   same rkey (resume-safe, like autorun). File I/O sits at the JVM edge."
-  (:require [kotoba.lang.text :as str]
+  (:require [kotoba.bytes :as kbytes] [kotoba.lang.text :as str]
             [kanjo.methods.kanjo-edn :as kanjo-edn]
-            #?(:clj [clojure.java.io :as io])))
+            #?(:clj [kotoba.io :as io])))
 
 (def actor-did  "did:web:etzhayyim.github.io:com-etzhayyim-kanjo")
 (def actor-handle "kanjo.etzhayyim.com")
@@ -73,7 +73,7 @@
 ;; ── deterministic content-addressed record key (FNV-1a → hex) ────────────────
 
 (defn- fnv1a [^String s]
-  #?(:clj (let [bs (.getBytes s "UTF-8")]
+  #?(:clj (let [bs (kbytes/utf8-bytes s)]
             (loop [h (unchecked-long 0xcbf29ce484222325) i 0]
               (if (< i (alength bs))
                 (recur (unchecked-multiply (bit-xor h (bit-and (aget bs i) 0xff))
@@ -214,7 +214,7 @@
 ;; ── main (file I/O at the edge) ──────────────────────────────────────────────
 
 #?(:clj
-   (def ^:private here (-> (io/file *file*) .getParentFile .getParentFile .getParentFile .getParentFile .getAbsolutePath)))
+   (def ^:private here (-> (io/file *file*) io/parent-file io/parent-file io/parent-file io/parent-file io/absolute-path)))
 
 #?(:clj
    (defn -main [& args]
@@ -225,7 +225,7 @@
            facts   (filter #(get % ":fin.fact/id") rows)
            {:keys [profile disclosures posts]} (compose filings facts now)
            outdir (io/file here "out" "atproto")]
-       (.mkdirs outdir)
+       (io/mkdirs outdir)
        (spit (io/file outdir "profile.json") (str (->json profile) "\n"))
        (spit (io/file outdir "disclosures.jsonl")
              (str/join "\n" (map #(->json (assoc (:record %) "rkey" (:rkey %))) disclosures)))

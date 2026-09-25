@@ -22,7 +22,7 @@
   `'b' + hashlib.sha256(json.dumps({'prev':…,'datoms':…}, ensure_ascii=False, sort_keys=True,
   separators=(',',':')).encode('utf-8')).hexdigest()` byte-for-byte.
   (The Python `__main__` heartbeat printer is omitted — it is the autorun.cljc -main concern.)"
-  (:require [kotoba.lang.text :as str]
+  (:require [kotoba.bytes :as kbytes] [kotoba.lang.text :as str]
             [kanjo.methods.kanjo-edn :as kanjo-edn]))
 
 ;; ── sha-256 host seam ─────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@
   "String → lowercase hex sha-256 digest (UTF-8). Rebind on hosts without MessageDigest."
   #?(:clj (fn [^String s]
             (let [d (.digest (java.security.MessageDigest/getInstance "SHA-256")
-                             (.getBytes s "UTF-8"))]
+                             (kbytes/utf8-bytes s))]
               (str/join (map #(let [h (Integer/toHexString (bit-and % 0xff))]
                                 (if (= 1 (count h)) (str "0" h) h))
                              d))))

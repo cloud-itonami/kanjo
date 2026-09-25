@@ -23,11 +23,11 @@
   (:require [kanjo.methods.kanjo-edn :as kanjo-edn]
             [kanjo.methods.analyze :as analyze]
             [kanjo.methods.kotoba :as kotoba]
-            #?(:clj [clojure.java.io :as io])))
+            #?(:clj [kotoba.io :as io])))
 
 (def base-as-of 20260609)
 
-#?(:clj (def here (-> *file* io/file .getAbsoluteFile .getParentFile)))
+#?(:clj (def here (-> *file* io/file io/absolute-file io/parent-file)))
 #?(:clj (def data (when here (io/file here ".." ".." ".." "data"))))
 #?(:clj (def merged (when data (io/file data "facts.merged.kotoba.edn"))))
 #?(:clj (def seed (when data (io/file data "seed-financial-facts.kotoba.edn"))))
@@ -39,7 +39,7 @@
      [graph-path]
      (cond
        (some? graph-path) graph-path
-       (and merged (.exists ^java.io.File merged)) merged
+       (and merged (io/exists? merged)) merged
        :else seed)))
 
 #?(:clj
@@ -97,7 +97,7 @@
            cycles (let [v (arg-after "--cycles" nil)] (if v (Long/parseLong v) 3))
            graph-arg (let [g (arg-after "--graph" nil)] (when g (io/file g)))
            log-path (io/file (arg-after "--log" (str log-default)))]
-       (when (and (some #{"--fresh"} argv) (.exists log-path)) (.delete log-path))
+       (when (and (some #{"--fresh"} argv) (io/exists? log-path)) (io/delete log-path))
        (let [res (run-autonomous cycles graph-arg log-path)]
          (println (str "# kanjo — AUTONOMOUS financial-disclosure over the kotoba Datom log "
                        "(offline ingest, LOCAL persist; live EDGAR/EDINET / live-node push stays G7-gated)\n"))

@@ -5,7 +5,7 @@
   investment advice (G4) — it never rates/values/recommends/forecasts; every derived
   number is a transparent ratio flagged :synthesized; live fetch is G7-gated; metric
   kinds match their declared inputs. ADR-2606032000."
-  (:require [kotoba.io :as io]
+  (:require [kotoba.lang.error :as kerror] [kotoba.io :as io]
             [kotoba.lang.text :as str]
             [kotoba.test :refer [deftest is]]
             [kanjo.methods.analyze :as analyze]
@@ -64,7 +64,7 @@
   ;; KANJO_OPERATOR_GATE is unset in the test env → fetch must refuse (throw) with a
   ;; message naming the G7 gate (the Python sys.exit equivalent).
   (let [e (try (ingest/fetch-edgar "0000320193") nil
-               (catch clojure.lang.ExceptionInfo e e))]
+               (catch kerror/ExceptionInfo e e))]
     (is (some? e) "live EDGAR fetch must refuse without KANJO_OPERATOR_GATE=1")
     (when e
       (let [msg (str/lower (ex-message e))]
