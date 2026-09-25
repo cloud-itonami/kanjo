@@ -22,7 +22,7 @@
   Convention parity (analyze.cljc / kanjo-edn): graph rows are maps with STRING keys."
   (:require [kotoba.lang.text :as str]
             [kanjo.methods.kanjo-edn :as kanjo-edn]
-            #?(:clj [clojure.java.io :as io])))
+            #?(:clj [kotoba.io :as io])))
 
 ;; ── load: kabuto supply graph + kanjō disclosed revenue ──────────────────────
 
@@ -225,7 +225,7 @@
 ;; ── main (file I/O at the edge) ──────────────────────────────────────────────
 
 #?(:clj
-   (def ^:private here (-> (io/file *file*) .getParentFile .getParentFile .getParentFile .getParentFile .getAbsolutePath)))
+   (def ^:private here (-> (io/file *file*) io/parent-file io/parent-file io/parent-file io/parent-file io/absolute-path)))
 
 #?(:clj
    (defn -main [& args]
@@ -241,17 +241,17 @@
            ;; the non-US nodes the dependency graph surfaced. Both join by org.corp.* key.
            chokepoints (str here "/data/seed-supply-chokepoints.kotoba.edn")
            frows (concat
-                  (if (.exists (io/file kanjo-facts))
+                  (if (io/exists? (io/file kanjo-facts))
                     (kanjo-edn/read-file kanjo-facts)
                     (kanjo-edn/read-file (str here "/data/seed-financial-facts.kotoba.edn")))
-                  (when (.exists (io/file chokepoints)) (kanjo-edn/read-file chokepoints)))
+                  (when (io/exists? (io/file chokepoints)) (kanjo-edn/read-file chokepoints)))
            filings (filter #(get % ":fin.filing/id") frows)
            facts (filter #(get % ":fin.fact/id") frows)
            rev (disclosed-revenue facts filings)
            metrics (node-metrics edges)
            deps (dependency-records edges comps rev now)
            outdir (io/file here "out" "depgraph")]
-       (.mkdirs outdir)
+       (io/mkdirs outdir)
        (spit (io/file outdir "world-supply.dot") (->dot edges comps rev metrics))
        (spit (io/file outdir "world-supply-core.dot")
              (->dot (core-edges edges metrics 20) comps rev metrics))

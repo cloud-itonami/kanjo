@@ -19,7 +19,7 @@
   (:require [kotoba.lang.text :as str]
             [kanjo.methods.kanjo-edn :as kanjo-edn]
             [kanjo.methods.concept-map :as cmap]
-            #?(:clj [clojure.java.io :as io])))
+            #?(:clj [kotoba.io :as io])))
 
 ;; Fallback company meta (name / sector / country), used only when kabuto's
 ;; :company graph is unavailable. kabuto (org.corp.* id space) is the SSoT.
@@ -35,7 +35,7 @@
 #?(:clj
    (def ^:private here
      ;; methods/ → actor root (one level up from this file's dir, like os.path.dirname×2)
-     (-> (io/file *file*) .getParentFile .getParentFile .getParentFile .getParentFile .getAbsolutePath)))
+     (-> (io/file *file*) io/parent-file io/parent-file io/parent-file io/parent-file io/absolute-path)))
 
 #?(:clj
    (def ^:private kabuto-seed
@@ -49,7 +49,7 @@
   ([path]
    #?(:clj
       (let [p (or path kabuto-seed)]
-        (if (and p (.exists (io/file p)))
+        (if (and p (io/exists? (io/file p)))
           (try
             (reduce (fn [meta r]
                       (let [cid (get r ":company/id")]
@@ -330,7 +330,7 @@
            metrics (derive-metrics cy)
            aggs (aggregates cy)
            outdir (io/file here "out")]
-       (.mkdirs outdir)
+       (io/mkdirs outdir)
        (spit (io/file outdir "intel-report.md") (report filings facts cy metrics aggs))
        (spit (io/file outdir "financial-metrics.kotoba.edn") (edn-dump metrics aggs))
        (println (str "kanjō analyze: " (count filings) " filings · " (count facts) " facts · "
