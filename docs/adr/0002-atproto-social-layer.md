@@ -3,7 +3,7 @@
 - Status: accepted (R1 increment)
 - Date: 2026-06-27
 - Supersedes/extends: ADR-2606032000 (kanjō foundation); the kotoba-native lexicons
-  in CLAUDE.md ("path-reserved; lexicon JSON lands with R1").
+  in AGENTS.md ("path-reserved; lexicon JSON lands with R1").
 - Actor: `did:web:etzhayyim.github.io:com-etzhayyim-kanjo` · `at://kanjo.etzhayyim.com`
 
 ## Context

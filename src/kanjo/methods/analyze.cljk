@@ -13,7 +13,7 @@
   it never rates 'good/bad', values a company, or recommends an action — preserved
   1:1 from the Python (the report wording the invariant suite asserts on is verbatim).
 
-  Convention parity (root CLAUDE.md / bond.cljc): graph rows are maps with STRING
+  Convention parity (root AGENTS.md / bond.cljc): graph rows are maps with STRING
   `\":fin.…/…\"` keys; keyword values stay `\":foo\"` strings. Pure transforms; file
   I/O sits at the JVM edge (kanjo-edn/read-file + spit)."
   (:require [kotoba.lang.text :as str]

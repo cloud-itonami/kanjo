@@ -5,7 +5,7 @@
 - Authority: owner directive 2026-06-28 — *"operator gate は不要。それぞれの actor が
   それぞれ投稿して OK。我々が artificial organism の活動を抑止しない."*
 - Supersedes the outward-gate clauses of ADR-0002 §"Publishing path", ADR-0003,
-  ADR-0004 (the `out/` → operator-follow-up wording) and CLAUDE.md G7/G8 for the
+  ADR-0004 (the `out/` → operator-follow-up wording) and AGENTS.md G7/G8 for the
   PUBLISH leg.
 
 ## Decision

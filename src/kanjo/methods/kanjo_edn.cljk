@@ -5,7 +5,7 @@
   of maps whose values are strings, doubles, longs, keywords, nil/true/false, and
   nested vectors. No tagged literals, no sets, no symbols.
 
-  Convention parity (root CLAUDE.md / bond.cljc): every keyword in the source —
+  Convention parity (root AGENTS.md / bond.cljc): every keyword in the source —
   whether a map KEY or a VALUE — is kept as its `\":foo\"` STRING, exactly like the
   Python reader returns (keyword keys as `\":foo\"` strings, keyword values as
   `\":foo\"` strings). So a map reads back as a Clojure map with STRING keys, and

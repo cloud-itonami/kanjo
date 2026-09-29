@@ -1,7 +1,7 @@
 # kanjō 勘定 — agent reference
 
 > World public-company **financial-disclosure (決算)** knowledge graph. Tier-B, R0 design-only. ADR-2606032000.
-> Read the repo-root `CLAUDE.md` first; this file only adds actor-local rules.
+> Read the repo-root `AGENTS.md` first; this file only adds actor-local rules.
 
 ## Identity
 
