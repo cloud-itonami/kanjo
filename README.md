@@ -40,7 +40,7 @@ python3 methods/ingest.py          # EDGAR/EDINET → EAVT (offline default; liv
 python3 methods/analyze.py         # → out/intel-report.md
 ```
 
-See [`out/intel-report.md`](out/intel-report.md) for the seed-cohort report and `CLAUDE.md` for the
+See [`out/intel-report.md`](out/intel-report.md) for the seed-cohort report and `AGENTS.md` for the
 constitutional rules.
 
 ## R0 honesty
